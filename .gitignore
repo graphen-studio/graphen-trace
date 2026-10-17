@@ -218,3 +218,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project files
+.vscode/
+docs/
+captures/
+experiments/
+.DS_Store
+poetry.lock
+node_modules/
+frontend/tsconfig.tsbuildinfo
