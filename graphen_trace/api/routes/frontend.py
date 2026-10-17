@@ -13,6 +13,7 @@ RESERVED_PREFIXES = {"api", "v1"}
 @router.get("/{asset_path:path}", include_in_schema=False)
 async def serve_frontend(asset_path: str) -> FileResponse:
     """Serves a frontend asset or the SPA entry point."""
+
     if asset_path.split("/", maxsplit=1)[0] in RESERVED_PREFIXES:
         raise HTTPException(status_code=404)
 
