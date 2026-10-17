@@ -1,7 +1,7 @@
 [project]
 name = "graphen-trace"
 version = "0.1.0"
-description = "Local dashboard for observing coding agent activity"
+description = "Advanced tracing and observability for coding agents across sessions, model usage, tool execution, and events."
 authors = [
     {name = "Adilson Pavan",email = "adilson.pavan@gmail.com"}
 ]
@@ -10,6 +10,7 @@ dependencies = [
     "cleo (>=2.1.0,<3.0.0)",
     "fastapi (>=0.143.2,<0.144.0)",
     "httpx (>=0.28.1,<0.29.0)",
+    "pyfiglet (>=1.0.2,<2.0.0)",
     "pydantic (>=2.12.0,<3.0.0)",
     "uvicorn (>=0.54.0,<0.55.0)"
 ]
@@ -30,10 +31,6 @@ graphen-trace = "graphen_trace.__main__:main"
 
 [tool.black]
 line-length = 88
-
-[tool.pylint.main]
-max-line-length = 88
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

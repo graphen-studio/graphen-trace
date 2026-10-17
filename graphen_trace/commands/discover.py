@@ -14,17 +14,36 @@ class DiscoverCommand(Command):
     def handle(self) -> int:
         agents = discover_agents()
         if not agents:
-            self.line("No supported agent installations detected.")
+            self.line("\n<comment>No known agent installations detected.</comment>")
+            self.line(
+                "Checked commands available on PATH: OpenCode, Claude, Codex, Kiro, Pi."
+            )
             return 0
 
-        self.line("<info>Installed agents</info>")
+        rows = []
         for agent in agents:
-            version = f" ({agent.version})" if agent.version else ""
-            adapter = "capture adapter available" if agent.adapter else "no adapter yet"
-            self.line(f"- {agent.name}{version}: {adapter}")
-            if agent.path:
-                self.line(f"  Path: {agent.path}")
+            adapter = (
+                "<comment>Supported</comment>" if agent.adapter else "Not supported"
+            )
+            rows.append([agent.name.title(), agent.version or "Unknown", adapter])
+
+        self.line("\n<info>Detected coding agents</info>")
+        table = self.table()
+        table.set_headers(["Agent", "Version", "Adapter support"])
+        table.set_rows(rows)
+        table.render()
+
+        self.line("\n<info>Executable paths</info>")
+        for agent in agents:
+            self.line(f"{agent.name.title()}: {agent.path}")
+
+        self.line("")
         self.line(
-            "Discovery is read-only; only OpenCode capture is planned for the MVP."
+            "<comment>Read-only discovery · no collection started · "
+            "no config changed.</comment>"
         )
+
+        self.line("")
+        self.line("Run <info>graphen-trace serve</info> to start passive collection.")
+
         return 0
