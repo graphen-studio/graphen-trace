@@ -2,6 +2,7 @@
 
 from cleo.commands.command import Command
 
+from graphen_trace.commands.branding import render_banner
 from graphen_trace.config.settings import settings
 from graphen_trace.services.server import serve
 
@@ -13,6 +14,9 @@ class ServeCommand(Command):
     description = "Starts the local dashboard and passive collection"
 
     def handle(self) -> int:
+        self.line(f"\n<fg=cyan>{render_banner()}</>")
+        self.line("<info>Starting Graphen Trace</info>")
         self.line(f"Dashboard: http://{settings.host}:{settings.port}")
+        self.line("Press Ctrl+C to stop.\n")
         serve(proxy_enabled=False)
         return 0

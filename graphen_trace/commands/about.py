@@ -1,9 +1,9 @@
 """About command."""
 
 from cleo.commands.command import Command
-from pyfiglet import Figlet
 
 from graphen_trace.__version__ import __version__
+from graphen_trace.commands.branding import render_banner
 
 
 class AboutCommand(Command):
@@ -13,8 +13,7 @@ class AboutCommand(Command):
     description = "Shows information about Graphen Trace"
 
     def handle(self) -> int:
-        title = Figlet(font="slant").renderText("Graphen Trace")
-        self.line(f"\n<fg=cyan>{title}</>")
+        self.line(f"\n<fg=cyan>{render_banner()}</>")
         self.line(
             "<fg=green>Advanced tracing and observability for coding agents.</fg=green>"
         )
