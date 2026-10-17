@@ -5,8 +5,9 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from graphen_trace.api.routes import health, sessions
+from graphen_trace.api.routes import health
 from graphen_trace.api.routes import proxy as proxy_routes
+from graphen_trace.api.routes import sessions
 
 
 def create_app(proxy_enabled: bool = False) -> FastAPI:

@@ -35,19 +35,20 @@ frontend-dev: ## Start Vite development server
 	@echo "\n> Starting Vite development server\n"
 	cd frontend && npm run dev
 
-frontend-build: ## Build frontend into the Python package
+frontend-build: ## Build frontend assets
 	@echo "\n> Building frontend assets\n"
 	cd frontend && npm run build
 
-lint: ## Check Python formatting, lint, and frontend types
-	@echo "\n> Running code quality checks\n"
-	poetry run black --check $(SRC_DIRS)
-	poetry run pylint graphen_trace
-	cd frontend && npm run lint
+lint: ## Format and lint the codebase
+	@echo "\n> Running code quality checks and security analysis on the project\n";\
+	poetry run black $(SRC_DIRS);\
+	poetry run isort --profile black $(SRC_DIRS);\
+	poetry run bandit -r -lll -x '.venv,venv,__pycache__,.pytest_cache' $(SRC_DIRS);\
+	poetry run flake8 $(SRC_DIRS);
 
 test: ## Run Python and frontend tests
 	@echo "\n> Running test suites\n"
-	poetry run python -m unittest discover
+	poetry run pytest
 	cd frontend && npm test
 
 build: frontend-build ## Build frontend and Python distributions

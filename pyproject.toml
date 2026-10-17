@@ -20,7 +20,10 @@ include = [{ path = "graphen_trace/web/dist/**", format = ["sdist", "wheel"] }]
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
-pylint = "^3.3.0"
+bandit = "^1.8.0"
+flake8 = "^7.1.0"
+isort = "^6.0.0"
+pytest = "^8.3.0"
 
 [project.scripts]
 graphen-trace = "graphen_trace.__main__:main"
