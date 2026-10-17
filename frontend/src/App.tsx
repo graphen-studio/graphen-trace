@@ -1,13 +1,90 @@
 import { Activity, Bot, Boxes, CircleDollarSign, Clock3, Radio, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import SessionDetails from "./SessionDetails";
+
+function selectedSession(): string | null {
+  const match = window.location.hash.match(/^#\/sessions\/([^/]+)$/);
+  try { return match ? decodeURIComponent(match[1]) : null; }
+  catch { return null; }
+}
+
+interface Session {
+  id: string;
+  title: string | null;
+  updated_at: string | null;
+  message_count: number;
+  source: string;
+  usage: { input_tokens: number | null; output_tokens: number | null };
+}
+
+interface Collection {
+  state: string;
+  detail: string;
+  last_seen: string | null;
+}
+
+interface UsageSummary {
+  session_count: number;
+  generation_count: number;
+  usage: Record<string, number | null>;
+  usage_incomplete: string[];
+  reported_cost: number | null;
+  cost_incomplete: boolean;
+}
 
 const metrics = [
-  { label: "Input tokens", value: "—", icon: Activity, color: "blue" },
-  { label: "Output tokens", value: "—", icon: Radio, color: "cyan" },
-  { label: "Active sessions", value: "0", icon: Bot, color: "green" },
-  { label: "Known cost", value: "—", icon: CircleDollarSign, color: "purple" },
+  { label: "Native input tokens", key: "input_tokens", icon: Activity, color: "blue" },
+  { label: "Native output tokens", key: "output_tokens", icon: Radio, color: "cyan" },
+  { label: "Reasoning tokens", key: "reasoning_tokens", icon: Bot, color: "green" },
+  { label: "Cache read tokens", key: "cache_read_tokens", icon: Activity, color: "blue" },
+  { label: "Cache write tokens", key: "cache_write_tokens", icon: Radio, color: "cyan" },
+  { label: "Sessions", key: "sessions", icon: Bot, color: "green" },
+  { label: "Agent-reported cost", key: "cost", icon: CircleDollarSign, color: "purple" },
 ];
 
 export default function App() {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [collection, setCollection] = useState<Collection | null>(null);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState(selectedSession);
+
+  useEffect(() => {
+    const navigate = () => setSessionId(selectedSession());
+    window.addEventListener("hashchange", navigate);
+    return () => window.removeEventListener("hashchange", navigate);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    async function refresh() {
+      try {
+        const responses = await Promise.all([
+          fetch("/api/sessions", { signal: controller.signal }),
+          fetch("/api/collection", { signal: controller.signal }),
+          fetch("/api/usage", { signal: controller.signal }),
+        ]);
+        if (responses.some((response) => !response.ok)) {
+          throw new Error("Could not load collection data");
+        }
+        const [data, status, consumption] = await Promise.all(responses.map((response) => response.json()));
+        if (!controller.signal.aborted) {
+          setSessions(data.items);
+          setCollection(status);
+          setUsage(consumption);
+          setError(null);
+        }
+      } catch {
+        if (!controller.signal.aborted) setError("Local service unavailable. Displayed data may be stale.");
+      } finally {
+        if (!controller.signal.aborted) timer = setTimeout(refresh, 2000);
+      }
+    }
+    void refresh();
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, []);
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -15,7 +92,7 @@ export default function App() {
           <img src="/logo-without-text.png" alt="" />
           <span>Graphen <b>Trace</b></span>
         </div>
-        <div className="connection"><span /> Local service</div>
+        <div className="connection">{error ? "Service unavailable" : "Local service"}</div>
       </header>
 
       <section className="intro">
@@ -28,26 +105,43 @@ export default function App() {
       </section>
 
       <section className="metrics">
-        {metrics.map(({ label, value, icon: Icon, color }) => (
+        {metrics.map(({ label, key, icon: Icon, color }) => (
           <article className="metric" key={label}>
             <div className={`metric-icon ${color}`}><Icon size={18} /></div>
-            <div><div className="metric-value">{value}</div><div className="metric-label">{label}</div></div>
+            <div><div className="metric-value">{usage ? (key === "sessions" ? usage.session_count : key === "cost" ? usage.reported_cost : usage.usage[key]) ?? "—" : "—"}</div><div className="metric-label">{label}{usage && (key === "cost" ? usage.cost_incomplete : usage.usage_incomplete.includes(key)) ? " (partial)" : ""}</div></div>
           </article>
         ))}
       </section>
+      <p className="collection-state">Native token categories across all synchronized sessions; cache and reasoning are shown separately, without assuming provider totals. Cost currency/calculation are unverified, not confirmed billing.</p>
 
-      <section className="sessions panel">
+      {sessionId ? <>
+        <SessionDetails key={sessionId} sessionId={sessionId} />
+        <p className="collection-state" role="status">{error || (collection ? `${collection.state}: ${collection.detail}` : "Connecting…")}</p>
+      </> : <section className="sessions panel">
         <div className="section-heading">
           <div><h2>Sessions</h2><p>Your agent activity will appear here</p></div>
           <button className="filter"><Search size={15} /> Search sessions</button>
         </div>
-        <div className="empty-state">
+        {sessions.length > 0 ? (
+          <div className="session-list">
+            {sessions.map((session) => (
+              <article className="session-row" key={session.id}>
+                <h3><a href={`#/sessions/${encodeURIComponent(session.id)}`}>{session.title || session.id}</a></h3>
+                <p>{session.message_count} messages · Input: {session.usage.input_tokens ?? "—"} · Output: {session.usage.output_tokens ?? "—"}</p>
+                <small>{session.source} · {session.updated_at ? new Date(session.updated_at).toLocaleString() : "Unknown update time"}</small>
+              </article>
+            ))}
+          </div>
+        ) : <div className="empty-state">
           <div className="empty-icon"><Clock3 size={22} /></div>
           <h3>Waiting for agent activity</h3>
           <p>Start OpenCode or run <code>graphen-trace discover</code> to check your setup.</p>
-          <div className="status-chip"><span /> Collector ready · OpenCode adapter foundation</div>
+        </div>}
+        <div className="collection-state" role="status">
+          {error || (collection ? `${collection.state}: ${collection.detail}` : "Connecting to local service…")}
+          {collection?.last_seen && <small>Last synchronized: {new Date(collection.last_seen).toLocaleString()}</small>}
         </div>
-      </section>
+      </section>}
       <footer>Local-first observability <span>·</span> Your data stays on this machine</footer>
     </main>
   );
