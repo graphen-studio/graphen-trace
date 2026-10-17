@@ -12,7 +12,7 @@ interface Session {
   id: string;
   title: string | null;
   updated_at: string | null;
-  message_count: number;
+  message_count: number | null;
   source: string;
   usage: { input_tokens: number | null; output_tokens: number | null };
 }
@@ -21,11 +21,12 @@ interface Collection {
   state: string;
   detail: string;
   last_seen: string | null;
+  warnings?: string[];
 }
 
 interface UsageSummary {
   session_count: number;
-  generation_count: number;
+  generation_count: number | null;
   usage: Record<string, number | null>;
   usage_incomplete: string[];
   reported_cost: number | null;
@@ -45,6 +46,7 @@ const metrics = [
 export default function App() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [collection, setCollection] = useState<Collection | null>(null);
+  const [liveCollection, setLiveCollection] = useState<Collection | null>(null);
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState(selectedSession);
@@ -64,14 +66,16 @@ export default function App() {
           fetch("/api/sessions", { signal: controller.signal }),
           fetch("/api/collection", { signal: controller.signal }),
           fetch("/api/usage", { signal: controller.signal }),
+          fetch("/api/collection/live", { signal: controller.signal }),
         ]);
         if (responses.some((response) => !response.ok)) {
           throw new Error("Could not load collection data");
         }
-        const [data, status, consumption] = await Promise.all(responses.map((response) => response.json()));
+        const [data, status, consumption, live] = await Promise.all(responses.map((response) => response.json()));
         if (!controller.signal.aborted) {
           setSessions(data.items);
           setCollection(status);
+          setLiveCollection(live);
           setUsage(consumption);
           setError(null);
         }
@@ -113,6 +117,16 @@ export default function App() {
         ))}
       </section>
       <p className="collection-state">Native token categories across all synchronized sessions; cache and reasoning are shown separately, without assuming provider totals. Cost currency/calculation are unverified, not confirmed billing.</p>
+      {((collection?.warnings?.length ?? 0) > 0 || collection?.state === "unavailable") && <aside className="collection-state" role="status">
+        <strong>Collection warning — captured data remains available</strong>
+        {collection?.state === "unavailable" && <p>{collection.detail}</p>}
+        <ul>{collection?.warnings?.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+      </aside>}
+      {(liveCollection?.state === "partial" || liveCollection?.state === "unavailable") && <aside className="collection-state" role="status">
+        <strong>Live events: {liveCollection.state}</strong>
+        <p>{liveCollection.detail}</p>
+        <ul>{liveCollection.warnings?.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+      </aside>}
 
       {sessionId ? <>
         <SessionDetails key={sessionId} sessionId={sessionId} />
@@ -127,7 +141,7 @@ export default function App() {
             {sessions.map((session) => (
               <article className="session-row" key={session.id}>
                 <h3><a href={`#/sessions/${encodeURIComponent(session.id)}`}>{session.title || session.id}</a></h3>
-                <p>{session.message_count} messages · Input: {session.usage.input_tokens ?? "—"} · Output: {session.usage.output_tokens ?? "—"}</p>
+                <p>{session.message_count ?? "—"} messages · Input: {session.usage.input_tokens ?? "—"} · Output: {session.usage.output_tokens ?? "—"}</p>
                 <small>{session.source} · {session.updated_at ? new Date(session.updated_at).toLocaleString() : "Unknown update time"}</small>
               </article>
             ))}

@@ -40,4 +40,16 @@ describe("session timeline", () => {
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
   });
+
+  it("shows compatibility warnings and preserves unrecognized payloads", () => {
+    const html = renderToStaticMarkup(<Timeline items={[{
+      id: "m1", kind: "assistant", sequence: null, created_at: null,
+      interaction_id: null, interaction_source: null, model: null, finish: null,
+      usage: null, tools: [], source: "sqlite", raw_payload: "opaque content",
+      normalization_warnings: ["Unknown tokens format; original payload preserved"],
+    }]} />);
+    expect(html).toContain("Unknown order");
+    expect(html).toContain("Unknown tokens format");
+    expect(html).toContain("opaque content");
+  });
 });

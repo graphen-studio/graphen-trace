@@ -20,6 +20,7 @@ interface Session {
   reported_cost: number | null;
   cost_incomplete: boolean;
   raw_data: Record<string, unknown>;
+  normalization_warnings?: string[];
 }
 
 interface Tool {
@@ -40,7 +41,7 @@ interface Tool {
 export interface TimelineItem {
   id: string;
   kind: string;
-  sequence: number;
+  sequence: number | null;
   created_at: string | null;
   interaction_id: string | null;
   interaction_source: string | null;
@@ -52,6 +53,8 @@ export interface TimelineItem {
   raw_data?: Record<string, unknown>;
   source_record?: Record<string, unknown>;
   reported_cost?: number | null;
+  raw_payload?: unknown;
+  normalization_warnings?: string[];
 }
 
 function UsageValues({ usage }: { usage: Usage }) {
@@ -88,7 +91,8 @@ function MessageContent({ data }: { data: Record<string, unknown> }) {
 export function Timeline({ items }: { items: TimelineItem[] }) {
   return <ol className="timeline-list">
     {items.map((item) => <li className="session-row" key={item.id}>
-      <h3>#{item.sequence} · {item.kind}</h3>
+      <h3>#{item.sequence ?? "Unknown order"} · {item.kind}</h3>
+      {item.normalization_warnings?.map((warning) => <p key={warning} role="status">{warning}</p>)}
       <p>{item.created_at ? new Date(item.created_at).toLocaleString() : "Unknown time"}</p>
       {item.model && <p>Model: {item.model.providerID} / {item.model.id}</p>}
       {item.finish && <p>Finish: {item.finish}</p>}
@@ -111,6 +115,7 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
       </div>)}
       <small>Source: {item.source} · Message: {item.id}</small>
       <Payload label="Complete native message" value={item.raw_data} />
+      <Payload label="Unrecognized native payload" value={item.raw_payload} />
       <Payload label="Source record" value={item.source_record} />
     </li>)}
   </ol>;
@@ -162,6 +167,7 @@ export default function SessionDetails({ sessionId }: { sessionId: string }) {
       {session && <>
         <p>Directory: {session.directory ?? "Unknown"} · OpenCode: {session.version ?? "Unknown"}</p>
         <UsageValues usage={session.usage} />
+        {session.normalization_warnings?.map((warning) => <p key={warning} role="status">{warning}</p>)}
         {session.usage_incomplete.length > 0 && <p>Partial totals: {session.usage_incomplete.join(", ")}. Missing values are not treated as zero.</p>}
         {session.reported_cost != null && <p>Agent-reported cost: {session.reported_cost}{session.cost_incomplete ? " (partial)" : ""} · Currency/calculation unverified; not confirmed billing.</p>}
         <small>Source: {session.source}</small>

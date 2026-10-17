@@ -18,9 +18,11 @@ separate terminal; Vite forwards `/api` to the local backend.
 
 ## Passive OpenCode collection
 
-- Currently validated: **OpenCode 2.0.32**, SQLite V2 dialect (`session_v2` and
-  `session_message`). Other versions, including V1, are explicitly rejected for
-  collection rather than interpreted using an incompatible reader.
+- Reference validated: **OpenCode 2.0.32**, SQLite V2 dialect (`session_v2` and
+  `session_message`). This is not a version allowlist. Other versions are read
+  whenever their structural contracts are recognizable, with a compatibility
+  warning. Missing optional fields disable only dependent features. Entirely
+  different dialects still need dedicated readers rather than guessed mappings.
 - `discover` only detects installations. `serve` and `run opencode` start the
   collector in the FastAPI lifespan and stop it on shutdown.
 - The source is opened with `mode=ro` and `query_only`, using consistent read
@@ -92,7 +94,7 @@ also reimports sessions previously captured as metadata only. No source data is 
 
 Graphen schema version 3 adds independently stored live events, observed native
 watermarks, and connection history. SSE connects only to an existing loopback
-OpenCode 2.0.32 service, validating content types and using authentication only
+OpenCode service, validating content types and using authentication only
 in memory. No OpenCode service is started, stopped or reconfigured. Native IDs
 deduplicate re-observed events. Events do not add a second copy of message usage
 to dashboard totals. SQLite polling keeps running even if SSE is unavailable.
@@ -100,8 +102,16 @@ to dashboard totals. SQLite polling keeps running even if SSE is unavailable.
 The SSE contract is volatile: connection/reconnection does not replay missed
 events. `possible_gap` remains true to avoid claiming complete historical capture.
 Only the connected instance is observed; separate standalone instances are not.
+Unvalidated server versions generate warnings rather than blocking the stream;
+unrecognized envelopes retain their full frame with explicit normalization limits.
 Connection transitions survive Graphen restarts. No UI redesign is included in
 this stage; the new events are exposed through the API for the future interface.
+
+Compatibility warnings are exposed in `/api/collection` and `/api/collection/live`
+and displayed on the dashboard. Collection can be `partial` while useful data
+continues to arrive. Field-specific message failures keep the raw payload, do not
+stop other sessions, and remain visible on subsequent polling cycles. Previously
+captured message details are retained if their source contract becomes unreadable.
 
 Next steps: validated V1 dialect, provider request/response capture through the
 optional proxy, available-tool catalog validation, and event-based synchronization
