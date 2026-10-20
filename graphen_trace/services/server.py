@@ -4,7 +4,6 @@ import uvicorn
 
 from graphen_trace.api.app import create_app
 from graphen_trace.config.settings import settings
-from graphen_trace.services.collector import start_collectors
 
 
 def create_server(proxy_enabled: bool = False) -> uvicorn.Server:
@@ -25,5 +24,4 @@ def run_server(proxy_enabled: bool = False) -> None:
 
 def serve(proxy_enabled: bool = False) -> None:
     """Starts passive collection and serves the local dashboard."""
-    start_collectors()
     run_server(proxy_enabled=proxy_enabled)
