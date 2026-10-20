@@ -77,25 +77,28 @@ def test_session_details_and_paginated_timeline(client: TestClient) -> None:
         "source": "opencode:sqlite:v2",
         "message_count": 2,
         "usage": {},
-        "raw_data": {"native_session_field": "preserved"},
-        "timeline": [
+        "timeline_records": [
             {
                 "id": f"m{index}",
-                "kind": "user",
-                "sequence": index,
-                "source": "opencode:sqlite:v2",
-                "raw_data": {"text": "complete prompt", "extra": [1, 2, 3]},
+                "session_id": "s1",
+                "type": "user",
+                "seq": index,
+                "time_created": index + 100,
+                "time_updated": index + 100,
+                "data": json.dumps({"text": "complete prompt", "extra": [1, 2, 3]}),
             }
             for index in range(2)
         ],
     }
     client.app.state.storage.apply("opencode:sqlite:v2", [record], {"s1"})
     assert client.get("/api/sessions/s1").json()["title"] == "Example"
-    assert client.get("/api/sessions/s1").json()["raw_data"] == record["raw_data"]
     response = client.get("/api/sessions/s1/timeline?limit=1&offset=1").json()
     assert response["total"] == 2
     assert response["items"][0]["id"] == "m1"
-    assert response["items"][0]["raw_data"] == record["timeline"][1]["raw_data"]
+    assert response["items"][0]["raw_data"] == {
+        "text": "complete prompt",
+        "extra": [1, 2, 3],
+    }
     assert client.get("/api/sessions/s1/timeline?limit=201").status_code == 422
     assert client.get("/api/sessions/s1/timeline?offset=-1").status_code == 422
 
@@ -149,3 +152,53 @@ def test_event_queries_are_independent_from_session_projection(
     assert client.get("/api/events?session_id=other").json()["total"] == 0
     assert client.get("/api/events?limit=201").status_code == 422
     assert client.get("/api/collection/live").json()["possible_gap"]
+
+
+def test_agent_filter_prevents_native_id_collisions(client: TestClient) -> None:
+    """The same native session ID is isolated by the persisted agent flag."""
+    records = [
+        {
+            "id": "same-native-id",
+            "agent": agent,
+            "title": agent,
+            "source": f"{agent}:sqlite:v1",
+            "revision": "r1",
+            "message_count": 0,
+            "usage": {},
+        }
+        for agent in ("opencode", "pi")
+    ]
+    client.app.state.storage.apply(
+        "opencode:sqlite:v1",
+        [records[0]],
+        {"same-native-id"},
+    )
+    client.app.state.storage.apply(
+        "pi:sqlite:v1",
+        [records[1]],
+        {"same-native-id"},
+        agent="pi",
+    )
+    assert (
+        client.get("/api/sessions?agent=opencode").json()["items"][0]["title"]
+        == "opencode"
+    )
+    assert client.get("/api/sessions?agent=pi").json()["items"][0]["title"] == "pi"
+    assert client.get("/api/sessions?agent=").status_code == 422
+    assert client.get("/api/usage?agent=pi").json()["session_count"] == 1
+    payload = {
+        "id": "same-native-event",
+        "type": "session.idle",
+        "created": 1,
+        "data": {"sessionID": "same-native-id"},
+    }
+    event = decode_frame({"data": json.dumps(payload), "event": "message", "id": None})
+    client.app.state.storage.save_event("opencode-instance", event)
+    client.app.state.storage.save_event(
+        "pi-instance",
+        event,
+        source="pi:sse:v1",
+        agent="pi",
+    )
+    assert client.get("/api/events?agent=opencode").json()["total"] == 1
+    assert client.get("/api/events?agent=pi&source=pi:sse:v1").json()["total"] == 1

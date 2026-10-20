@@ -7,12 +7,12 @@ class ObservedEvent(BaseModel):
     """An event observed on a single service instance, with full provenance."""
 
     id: str
+    agent: str
     kind: str
     session_id: str | None
     observed_at: str
     created_at: float | None = None
-    raw_data: dict[str, JsonValue]
-    frame: dict[str, JsonValue]
+    raw_data: JsonValue
     instance_id: str
     source: str
     normalization_warnings: list[str] = Field(default_factory=list)
@@ -31,12 +31,16 @@ class ConnectionTransition(BaseModel):
 
     state: str
     observed_at: str
+    agent: str
+    source: str
 
 
 class LiveStatus(BaseModel):
     """Connection health does not imply historical or cross-instance coverage."""
 
     state: str
+    agent: str = "opencode"
+    source: str = "opencode:sse:v2"
     detail: str
     last_seen: str | None = None
     possible_gap: bool

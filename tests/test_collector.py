@@ -6,12 +6,22 @@ from pathlib import Path
 
 import pytest
 
+from graphen_trace.adapters.opencode.normalize import normalize_timeline
 from graphen_trace.adapters.opencode.source import (
     OpenCodeSource,
     UnsupportedSourceError,
 )
 from graphen_trace.services.collector import Collector
 from graphen_trace.services.storage import Storage
+
+
+def _timeline(
+    storage: Storage, session_id: str, page: tuple[int, int] = (50, 0)
+) -> dict:
+    """Builds the API projection from the canonical message payload rows."""
+    result = storage.timeline(session_id, page)
+    result["items"] = normalize_timeline(result["items"])
+    return result
 
 
 @pytest.fixture
@@ -86,7 +96,7 @@ def test_replayed_tool_id_uses_latest_observation(collector: Collector) -> None:
             ("m2", "s1", "assistant", 2, 2000, 2000, json.dumps(data)),
         )
     collector.sync()
-    timeline = collector.storage.timeline("s1", (50, 0))["items"]
+    timeline = _timeline(collector.storage, "s1")["items"]
     assert timeline[0]["tools"] == []
     assert timeline[1]["tools"][0]["status"] == "completed"
     assert timeline[1]["tools"][0]["duration_ms"] is None
@@ -105,8 +115,31 @@ def test_import_is_idempotent_and_captures_complete_content(
     assert sessions[0]["usage"]["input_tokens"] == 10
     assert sessions[0]["usage"]["cache_read_tokens"] == 5
     assert "sensitive output" not in json.dumps(sessions)
-    assert "sensitive output" in json.dumps(collector.storage.timeline("s1", (50, 0)))
+    assert "sensitive output" in json.dumps(_timeline(collector.storage, "s1"))
     assert collector.status["state"] == "collecting"
+
+
+def test_sqlite_stores_one_message_payload_and_minimal_session_projection(
+    collector: Collector,
+) -> None:
+    """The Graphen database keeps one native payload, not a second raw projection."""
+    collector.sync()
+    with collector.storage.connect() as connection:
+        session_data = connection.execute(
+            "SELECT data FROM observed_session WHERE agent='opencode' AND id='s1'"
+        ).fetchone()[0]
+        message_data = connection.execute(
+            "SELECT data FROM observed_message WHERE agent='opencode' AND id='m1'"
+        ).fetchone()[0]
+    assert "raw_data" not in session_data
+    assert "source_record" not in session_data
+    with sqlite3.connect(collector.source.path) as source_connection:
+        source_data = source_connection.execute(
+            "SELECT data FROM session_message WHERE id='m1'"
+        ).fetchone()[0]
+    assert json.loads(message_data) == json.loads(source_data)
+    assert "raw_data" not in message_data
+    assert "tools" not in message_data
 
 
 def test_full_records_and_usage_keep_native_values(collector: Collector) -> None:
@@ -140,9 +173,9 @@ def test_full_records_and_usage_keep_native_values(collector: Collector) -> None
             ),
         )
     collector.sync()
-    assert collector.storage.timeline("s1", (50, 0))["items"][0]["raw_data"] == payload
+    assert _timeline(collector.storage, "s1")["items"][0]["raw_data"] == payload
     session = collector.storage.session("s1")
-    assert session["raw_data"]["directory"] == "/example"
+    assert "raw_data" not in session
     assert session["usage"]["input_tokens"] == 30
     assert session["usage"]["output_tokens"] == 4
     assert "input_tokens" not in session["usage_incomplete"]
@@ -174,7 +207,7 @@ def test_message_update_and_deletion_are_reconciled(collector: Collector) -> Non
         connection.execute("DELETE FROM session_v2")
     collector.sync()
     assert collector.storage.sessions(50, 0) == []
-    assert collector.storage.timeline("s1", (50, 0))["total"] == 0
+    assert _timeline(collector.storage, "s1")["total"] == 0
 
 
 def test_timeline_preserves_tool_state_and_payloads(collector: Collector) -> None:
@@ -209,7 +242,7 @@ def test_timeline_preserves_tool_state_and_payloads(collector: Collector) -> Non
             (json.dumps({"content": [tool, tool], "finish": "tool-calls"}),),
         )
     collector.sync()
-    page = collector.storage.timeline("s1", (50, 0))
+    page = _timeline(collector.storage, "s1")
     assert [item["kind"] for item in page["items"]] == ["user", "assistant"]
     generation = page["items"][1]
     assert generation["interaction_id"] == "user-1"
@@ -223,23 +256,8 @@ def test_timeline_preserves_tool_state_and_payloads(collector: Collector) -> Non
     assert execution["input"] == {"command": "private command"}
     assert execution["output"] == [{"text": "private output"}]
     assert page["items"][0]["raw_data"]["text"] == "private prompt"
-    assert collector.storage.timeline("s1", (1, 1))["items"][0]["id"] == "m1"
-    assert collector.storage.timeline("s1", (1, 1))["total"] == 2
-
-
-def test_v1_graphen_storage_migrates_and_reimports_details(
-    collector: Collector,
-) -> None:
-    """An existing Graphen database upgrades without losing session summaries."""
-    collector.sync()
-    with collector.storage.connect() as connection:
-        connection.execute("DROP TABLE observed_message")
-        connection.execute("PRAGMA user_version = 1")
-        connection.execute("UPDATE observed_session SET revision='old-format'")
-    collector.storage.initialize()
-    assert collector.storage.session("s1") is not None
-    assert collector.sync() == 1
-    assert collector.storage.timeline("s1", (50, 0))["total"] == 1
+    assert _timeline(collector.storage, "s1", (1, 1))["items"][0]["id"] == "m1"
+    assert _timeline(collector.storage, "s1", (1, 1))["total"] == 2
 
 
 @pytest.mark.parametrize("version", ["2.0.33", "2.1.0", "3.0.0", "unknown"])
@@ -268,7 +286,7 @@ def test_unavailable_messages_preserve_sessions_and_previous_details(
     assert collector.status["state"] == "partial"
     assert not collector.status["capabilities"]["messages"]
     assert collector.storage.session("s1")["message_count"] is None
-    assert collector.storage.timeline("s1", (50, 0))["total"] == 1
+    assert _timeline(collector.storage, "s1")["total"] == 1
     with sqlite3.connect(collector.source.path) as connection:
         connection.execute("DROP TABLE session_v2")
     with pytest.raises(UnsupportedSourceError):
@@ -286,7 +304,7 @@ def test_missing_optional_columns_do_not_block_readable_records(
     collector.sync()
     assert collector.status["state"] == "partial"
     assert collector.storage.session("s1")["title"] is None
-    timeline = collector.storage.timeline("s1", (50, 0))["items"]
+    timeline = _timeline(collector.storage, "s1")["items"]
     assert timeline[0]["sequence"] is None
     assert timeline[0]["interaction_id"] is None
     assert timeline[0]["usage"]["input_tokens"] == 10
@@ -312,7 +330,7 @@ def test_changed_token_format_does_not_hide_tools_or_raw_content(
     with sqlite3.connect(collector.source.path) as connection:
         connection.execute("UPDATE session_message SET data=?", (json.dumps(data),))
     collector.sync()
-    item = collector.storage.timeline("s1", (50, 0))["items"][0]
+    item = _timeline(collector.storage, "s1")["items"][0]
     assert item["usage"] is None
     assert item["tools"][0]["name"] == "bash"
     assert item["raw_data"] == data
@@ -354,7 +372,7 @@ def test_source_is_read_only_and_unknown_payloads_are_preserved(
         )
     collector.sync()
     assert collector.storage.revisions("opencode:sqlite:v2") != previous
-    item = collector.storage.timeline("s1", (50, 0))["items"][0]
+    item = _timeline(collector.storage, "s1")["items"][0]
     assert item["raw_payload"] == "invalid json"
     assert item["normalization_warnings"]
     assert collector.status["state"] == "partial"

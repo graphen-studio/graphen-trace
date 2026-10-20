@@ -19,7 +19,6 @@ interface Session {
   usage_incomplete: string[];
   reported_cost: number | null;
   cost_incomplete: boolean;
-  raw_data: Record<string, unknown>;
   normalization_warnings?: string[];
 }
 
@@ -171,7 +170,6 @@ export default function SessionDetails({ sessionId }: { sessionId: string }) {
         {session.usage_incomplete.length > 0 && <p>Partial totals: {session.usage_incomplete.join(", ")}. Missing values are not treated as zero.</p>}
         {session.reported_cost != null && <p>Agent-reported cost: {session.reported_cost}{session.cost_incomplete ? " (partial)" : ""} · Currency/calculation unverified; not confirmed billing.</p>}
         <small>Source: {session.source}</small>
-        <Payload label="Complete native session" value={session.raw_data} />
         {session.parent_id && <p><a href={`#/sessions/${encodeURIComponent(session.parent_id)}`}>Open parent session</a></p>}
       </>}
       {error && <p role="alert">{error}</p>}

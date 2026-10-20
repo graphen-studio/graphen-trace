@@ -31,6 +31,11 @@ separate terminal; Vite forwards `/api` to the local backend.
   have their message JSON read again. Replacements, revisions, and source
   deletions are committed together in the Graphen database. This is projection
   polling, not an event-log cursor: V2 event-log compatibility is not established.
+- Graphen records are scoped by `agent` and `source` in one local SQLite file.
+  Message payload JSON is stored once with indexed identity/order columns;
+  session summaries retain selected dashboard fields instead of copying every
+  native session column. SSE stores its payload once, without a duplicate frame.
+  This pre-release reset does not migrate the previous local experimental schema.
 - Captured: session IDs, titles, directory, parent ID, source version, latest
   observed model, message count, timestamps, native usage categories, and timeline
   metadata. Each tool execution retains its native call ID, name, status, times,

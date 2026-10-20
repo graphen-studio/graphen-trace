@@ -251,13 +251,8 @@ def normalize_session(session: dict, messages: list[dict]) -> dict:
         ),
         "reported_cost": sum(costs) if costs else None,
         "cost_incomplete": len(costs) < generations or session["message_count"] is None,
-        "raw_data": {
-            key: session[key]
-            for key in session.keys()
-            if key not in {"message_count", "message_seq", "message_updated"}
-            and not key.startswith("_")
-        },
         "revision": revision(session),
         "timeline": timeline if session["message_count"] is not None else None,
+        "timeline_records": messages if session["message_count"] is not None else None,
         "normalization_warnings": sorted(warnings),
     }

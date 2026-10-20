@@ -227,17 +227,15 @@ def test_reconnection_failure_and_shutdown_leave_persisted_boundaries(
     ]
 
 
-def test_schema_two_upgrades_without_losing_existing_records(tmp_path: Path) -> None:
-    """Live-event tables are additive and survive storage initialization again."""
+def test_clean_storage_schema_survives_reinitialization(tmp_path: Path) -> None:
+    """A newly-created schema can be opened again without duplicating data."""
     storage = Storage(tmp_path / "trace.db")
     storage.initialize()
     event = decode_frame(
         {"data": json.dumps(native_event()), "event": "message", "id": None}
     )
     storage.save_event("instance", event)
-    with storage.connect() as connection:
-        connection.execute("PRAGMA user_version = 2")
     storage.initialize()
     assert storage.events(None, (50, 0))["total"] == 1
     with storage.connect() as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 1

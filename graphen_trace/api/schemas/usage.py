@@ -23,4 +23,5 @@ class UsageSummary(BaseModel):
     usage_incomplete: list[str] = Field(default_factory=list)
     reported_cost: float | None = None
     cost_incomplete: bool = False
-    source: str
+    source: str = "opencode:sqlite:v2"
+    agent: str = "opencode"

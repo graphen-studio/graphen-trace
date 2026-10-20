@@ -1,6 +1,6 @@
 """Session response contracts."""
 
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import BaseModel, Field
 
 from graphen_trace.api.schemas.usage import TokenUsage
 
@@ -27,9 +27,7 @@ class SessionSummary(BaseModel):
 
 
 class SessionDetail(SessionSummary):
-    """Session projection with the complete native session record."""
-
-    raw_data: dict[str, JsonValue] = Field(default_factory=dict)
+    """Selected session fields needed to navigate and investigate a trace."""
 
 
 class SessionListResponse(BaseModel):

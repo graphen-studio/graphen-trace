@@ -12,6 +12,8 @@ from graphen_trace.config.settings import Settings
 from graphen_trace.services.storage import Storage
 
 LOGGER = logging.getLogger(__name__)
+AGENT = "opencode"
+SOURCE = "opencode:sse:v2"
 
 
 class LiveCollector:
@@ -70,10 +72,16 @@ class LiveCollector:
                     warnings=warnings,
                 )
 
-                await asyncio.to_thread(self.storage.mark_live, "connected")
+                await asyncio.to_thread(
+                    self.storage.mark_live, "connected", SOURCE, AGENT
+                )
                 async for event in read_frames(response.aiter_lines()):
                     await asyncio.to_thread(
-                        self.storage.save_event, connection.instance_id, event
+                        self.storage.save_event,
+                        connection.instance_id,
+                        event,
+                        SOURCE,
+                        AGENT,
                     )
                     self.status["last_seen"] = event["observed_at"]
 
@@ -119,6 +127,6 @@ class LiveCollector:
         """Records connection boundaries without hiding storage failures."""
 
         try:
-            await asyncio.to_thread(self.storage.mark_live, state)
+            await asyncio.to_thread(self.storage.mark_live, state, SOURCE, AGENT)
         except sqlite3.Error:
             LOGGER.warning("Could not persist live collection state")
