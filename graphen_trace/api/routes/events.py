@@ -28,7 +28,7 @@ def live_status(
 ) -> dict:
     """Reports SSE health separately so polling success never hides live gaps."""
 
-    collector = request.app.state.live_collector
+    collector = request.app.state.collection_manager.live_collector
     status = (
         collector.status
         if collector

@@ -26,16 +26,9 @@ def list_sessions(
 
 @router.get("/collection", response_model=CollectionStatus)
 def collection_status(request: Request) -> dict:
-    """Reports source availability and the limits of this collection stage."""
+    """Reports the selected collector or the initial idle state."""
 
-    collector = request.app.state.collector
-    if collector is None:
-        return {
-            "state": "not_detected",
-            "last_seen": None,
-            "detail": "OpenCode not found",
-        }
-    return collector.status
+    return request.app.state.collection_manager.status
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDetail)

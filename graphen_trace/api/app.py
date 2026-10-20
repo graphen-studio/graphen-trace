@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from graphen_trace.api.lifecycle import lifespan
-from graphen_trace.api.routes import events, frontend, health
+from graphen_trace.api.routes import agents, events, frontend, health
 from graphen_trace.api.routes import proxy as proxy_routes
 from graphen_trace.api.routes import sessions, usage
 
@@ -15,6 +15,7 @@ def create_app(proxy_enabled: bool = False) -> FastAPI:
 
     app.state.proxy_enabled = proxy_enabled
     app.include_router(health.router, prefix="/api")
+    app.include_router(agents.router, prefix="/api")
     app.include_router(events.router, prefix="/api")
     app.include_router(sessions.router, prefix="/api")
     app.include_router(usage.router, prefix="/api")

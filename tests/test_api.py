@@ -12,6 +12,7 @@ from graphen_trace.adapters.opencode.events import decode_frame
 from graphen_trace.api import lifecycle
 from graphen_trace.api.app import create_app
 from graphen_trace.api.routes import frontend
+from graphen_trace.services.discovery import AgentInstallation
 
 
 @pytest.fixture
@@ -20,7 +21,12 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     monkeypatch.setattr(
         lifecycle,
         "settings",
-        replace(lifecycle.settings, database_path=tmp_path / "trace.db"),
+        replace(
+            lifecycle.settings,
+            database_path=tmp_path / "trace.db",
+            opencode_database=tmp_path / "opencode.db",
+            opencode_service_file=tmp_path / "missing-service.json",
+        ),
     )
     monkeypatch.setattr(lifecycle, "discover_agents", lambda: [])
     with TestClient(create_app()) as api_client:
@@ -59,10 +65,42 @@ def test_sessions_and_collection_status(client: TestClient) -> None:
     """Dashboard routes use initialized Graphen storage and expose coverage."""
     assert client.get("/api/sessions").json() == {"items": []}
     assert client.get("/api/sessions?limit=201").status_code == 422
-    assert client.get("/api/collection").json()["state"] == "not_detected"
+    assert client.get("/api/collection").json()["state"] == "not_started"
+    assert client.get("/api/agents").json() == {"items": []}
     consumption = client.get("/api/usage").json()
     assert consumption["session_count"] == 0
     assert consumption["usage"]["input_tokens"] is None
+
+
+def test_collection_requires_an_installed_supported_agent(client: TestClient) -> None:
+    """Unsupported agents are discoverable but cannot start a collector."""
+    client.app.state.collection_manager.agents = [
+        AgentInstallation("claude", "/example/claude", "1.0", False)
+    ]
+    assert client.get("/api/agents").json() == {
+        "items": [
+            {
+                "name": "claude",
+                "path": "/example/claude",
+                "version": "1.0",
+                "adapter": False,
+            }
+        ]
+    }
+    assert client.post("/api/collection", json={"agent": "claude"}).status_code == 409
+    assert client.post("/api/collection", json={"agent": "missing"}).status_code == 404
+    assert client.post("/api/collection", json={}).status_code == 422
+
+
+def test_collection_starts_only_after_explicit_selection(client: TestClient) -> None:
+    """Selecting the supported installation starts passive collection."""
+    client.app.state.collection_manager.agents = [
+        AgentInstallation("opencode", "/example/opencode", "2.0.32", True)
+    ]
+    response = client.post("/api/collection", json={"agent": "opencode"})
+    assert response.status_code == 200
+    assert response.json()["agent"] == "opencode"
+    assert response.json()["state"] == "starting"
 
 
 def test_session_details_and_paginated_timeline(client: TestClient) -> None:
