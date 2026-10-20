@@ -7,11 +7,12 @@ from graphen_trace.services.discovery import AgentInstallation
 
 @dataclass(frozen=True)
 class OpenCodeAdapter:
-    """Declares the initial OpenCode capture capability."""
+    """Declares the validated OpenCode capture capability."""
 
     agent_name: str = "opencode"
     capture_sources: tuple[str, ...] = ("local database", "local API/SSE")
-    implemented: bool = False
+    validated_versions: tuple[str, ...] = ("2.0.32",)
+    implemented: bool = True
 
     def supports(self, installation: AgentInstallation) -> bool:
         """Returns whether an installation belongs to OpenCode."""

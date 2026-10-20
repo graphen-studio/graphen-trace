@@ -1,21 +1,30 @@
 """Tests for initial dashboard API routes."""
 
+import json
+from dataclasses import replace
 from pathlib import Path
+from typing import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
 
+from graphen_trace.adapters.opencode.events import decode_frame
+from graphen_trace.api import lifecycle
 from graphen_trace.api.app import create_app
-
-FRONTEND_INDEX = (
-    Path(__file__).parents[1] / "graphen_trace" / "web" / "dist" / "index.html"
-)
+from graphen_trace.api.routes import frontend
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """Creates a client for the Graphen Trace API."""
-    return TestClient(create_app())
+    monkeypatch.setattr(
+        lifecycle,
+        "settings",
+        replace(lifecycle.settings, database_path=tmp_path / "trace.db"),
+    )
+    monkeypatch.setattr(lifecycle, "discover_agents", lambda: [])
+    with TestClient(create_app()) as api_client:
+        yield api_client
 
 
 def test_health_route_is_served(client: TestClient) -> None:
@@ -24,10 +33,17 @@ def test_health_route_is_served(client: TestClient) -> None:
     assert client.get("/api/not-implemented").status_code == 404
 
 
-@pytest.mark.skipif(not FRONTEND_INDEX.is_file(), reason="Build frontend assets first")
-def test_frontend_is_served(client: TestClient) -> None:
+def test_frontend_is_served(
+    client: TestClient,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The SPA fallback returns the compiled frontend when present."""
-    assert client.get("/").status_code == 200
+    (tmp_path / "index.html").write_text("<html>Graphen Trace</html>", encoding="utf-8")
+    monkeypatch.setattr(frontend, "WEB_ROOT", tmp_path)
+    assert client.get("/").text == "<html>Graphen Trace</html>"
+    assert client.get("/dashboard/session").status_code == 200
+    assert client.get("/v1/models").status_code == 404
 
 
 def test_proxy_route_is_only_enabled_explicitly() -> None:
@@ -37,3 +53,99 @@ def test_proxy_route_is_only_enabled_explicitly() -> None:
 
     assert not passive_app.state.proxy_enabled
     assert proxy_app.state.proxy_enabled
+
+
+def test_sessions_and_collection_status(client: TestClient) -> None:
+    """Dashboard routes use initialized Graphen storage and expose coverage."""
+    assert client.get("/api/sessions").json() == {"items": []}
+    assert client.get("/api/sessions?limit=201").status_code == 422
+    assert client.get("/api/collection").json()["state"] == "not_detected"
+    consumption = client.get("/api/usage").json()
+    assert consumption["session_count"] == 0
+    assert consumption["usage"]["input_tokens"] is None
+
+
+def test_session_details_and_paginated_timeline(client: TestClient) -> None:
+    """Session endpoints return validated contracts and distinguish missing IDs."""
+    assert client.get("/api/sessions/missing").status_code == 404
+    assert client.get("/api/sessions/missing/timeline").status_code == 404
+    record = {
+        "id": "s1",
+        "agent": "opencode",
+        "title": "Example",
+        "revision": "test",
+        "source": "opencode:sqlite:v2",
+        "message_count": 2,
+        "usage": {},
+        "raw_data": {"native_session_field": "preserved"},
+        "timeline": [
+            {
+                "id": f"m{index}",
+                "kind": "user",
+                "sequence": index,
+                "source": "opencode:sqlite:v2",
+                "raw_data": {"text": "complete prompt", "extra": [1, 2, 3]},
+            }
+            for index in range(2)
+        ],
+    }
+    client.app.state.storage.apply("opencode:sqlite:v2", [record], {"s1"})
+    assert client.get("/api/sessions/s1").json()["title"] == "Example"
+    assert client.get("/api/sessions/s1").json()["raw_data"] == record["raw_data"]
+    response = client.get("/api/sessions/s1/timeline?limit=1&offset=1").json()
+    assert response["total"] == 2
+    assert response["items"][0]["id"] == "m1"
+    assert response["items"][0]["raw_data"] == record["timeline"][1]["raw_data"]
+    assert client.get("/api/sessions/s1/timeline?limit=201").status_code == 422
+    assert client.get("/api/sessions/s1/timeline?offset=-1").status_code == 422
+
+
+def test_usage_aggregates_sessions_beyond_the_default_page(client: TestClient) -> None:
+    """Global consumption is not limited by the dashboard session list page."""
+    records = [
+        {
+            "id": f"s{index}",
+            "agent": "opencode",
+            "source": "opencode:sqlite:v2",
+            "revision": "test",
+            "message_count": 1,
+            "generation_count": 1,
+            "usage": {"input_tokens": 10, "cache_read_tokens": 5},
+            "usage_incomplete": ["output_tokens"],
+            "reported_cost": 0.5,
+        }
+        for index in range(51)
+    ]
+    client.app.state.storage.apply(
+        "opencode:sqlite:v2",
+        records,
+        {record["id"] for record in records},
+    )
+    assert len(client.get("/api/sessions").json()["items"]) == 50
+    consumption = client.get("/api/usage").json()
+    assert consumption["session_count"] == 51
+    assert consumption["usage"]["input_tokens"] == 510
+    assert consumption["usage"]["cache_read_tokens"] == 255
+    assert consumption["usage"]["output_tokens"] is None
+    assert consumption["usage_incomplete"] == ["output_tokens"]
+    assert consumption["reported_cost"] == 25.5
+
+
+def test_event_queries_are_independent_from_session_projection(
+    client: TestClient,
+) -> None:
+    """A permission event is queryable before its session appears in SQLite."""
+    payload = {
+        "id": "evt_permission",
+        "type": "permission.replied",
+        "created": 1000,
+        "data": {"sessionID": "new-session", "requestID": "r1", "reply": "reject"},
+    }
+    event = decode_frame({"data": json.dumps(payload), "event": "message", "id": None})
+    client.app.state.storage.save_event("instance", event)
+    page = client.get("/api/events?session_id=new-session").json()
+    assert page["total"] == 1
+    assert page["items"][0]["raw_data"] == payload
+    assert client.get("/api/events?session_id=other").json()["total"] == 0
+    assert client.get("/api/events?limit=201").status_code == 422
+    assert client.get("/api/collection/live").json()["possible_gap"]
