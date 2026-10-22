@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from graphen_trace.adapters.opencode import normalize
 from graphen_trace.api.schemas.collection import CollectionStatus
 from graphen_trace.api.schemas.sessions import SessionDetail, SessionListResponse
-from graphen_trace.api.schemas.timeline import TimelineResponse
+from graphen_trace.api.schemas.timeline import SessionSearchResponse, TimelineResponse
 
 router = APIRouter()
 
@@ -54,12 +54,13 @@ def session_timeline(
     offset: int = Query(default=0, ge=0),
     agent: str = Query(default="opencode", min_length=1),
     source: str = Query(default="opencode:sqlite:v2", min_length=1),
+    latest: bool = False,
 ) -> dict:
     """Returns the persisted timeline with full native message content."""
 
     session_details(session_id, request, agent, source)
     page = request.app.state.storage.timeline(
-        session_id, (limit, offset), source, agent
+        session_id, (limit, offset), source, agent, latest=latest
     )
     if agent == "opencode":
         page["items"] = normalize.normalize_timeline(page["items"])
@@ -70,3 +71,27 @@ def session_timeline(
             {**message, "agent": agent, "source": source} for message in page["items"]
         ]
     return page
+
+
+@router.get("/sessions/{session_id}/search", response_model=SessionSearchResponse)
+def search_session(
+    session_id: str,
+    request: Request,
+    q: str = Query(min_length=1, max_length=200),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    agent: str = Query(default="opencode", min_length=1),
+    source: str = Query(default="opencode:sqlite:v2", min_length=1),
+) -> dict:
+    """Searches literal text in all captured prompts and responses of a session."""
+    session_details(session_id, request, agent, source)
+    query = q.strip()
+    if not query:
+        raise HTTPException(status_code=422, detail="Search text must not be blank")
+    if agent != "opencode":
+        raise HTTPException(
+            status_code=409, detail="Text search not supported for agent"
+        )
+    return request.app.state.storage.search_messages(
+        session_id, query, (limit, offset), source, agent
+    )

@@ -49,3 +49,20 @@ class TimelineResponse(BaseModel):
 
     items: list[TimelineItem]
     total: int
+    offset: int = 0
+
+
+class SessionSearchResult(BaseModel):
+    """A matching message and its position in the complete timeline."""
+
+    message_id: str
+    kind: str
+    timeline_offset: int
+    excerpt: str
+
+
+class SessionSearchResponse(BaseModel):
+    """Matching messages, paginated independently of the conversation."""
+
+    items: list[SessionSearchResult]
+    total: int

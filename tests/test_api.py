@@ -172,6 +172,85 @@ def test_usage_aggregates_sessions_beyond_the_default_page(client: TestClient) -
     assert consumption["reported_cost"] == 25.5
 
 
+def _store_search_session(client: TestClient) -> None:
+    messages = [
+        {
+            "id": f"m{index}",
+            "type": "user" if index % 2 == 0 else "assistant",
+            "seq": index,
+            "data": json.dumps({"text": f"Message {index}"}),
+        }
+        for index in range(105)
+    ]
+    messages[0]["data"] = json.dumps({"text": "Search CACHE here"})
+    messages[101]["data"] = json.dumps(
+        {
+            "content": [
+                {"type": "text", "text": "Another cache match: 100% [a.*] ação"},
+                {"type": "tool", "text": "tool-secret"},
+                {"type": "reasoning", "text": "reasoning-secret"},
+            ],
+            "metadata": "metadata-secret",
+        }
+    )
+    messages[102]["data"] = "malformed JSON"
+    messages[103]["data"] = json.dumps({"content": [None, "unknown", {}]})
+    record = {
+        "id": "search-session",
+        "agent": "opencode",
+        "source": "opencode:sqlite:v2",
+        "revision": "test",
+        "message_count": len(messages),
+        "usage": {},
+        "timeline_records": messages,
+    }
+    client.app.state.storage.apply("opencode:sqlite:v2", [record], {record["id"]})
+
+
+def test_latest_timeline_page_preserves_chronological_order(client: TestClient) -> None:
+    """Latest resolves a stable page offset without reversing its records."""
+    _store_search_session(client)
+    response = client.get(
+        "/api/sessions/search-session/timeline?latest=true&limit=50"
+    ).json()
+    assert response["offset"] == 100
+    assert response["total"] == 105
+    assert [item["id"] for item in response["items"]] == [
+        f"m{index}" for index in range(100, 105)
+    ]
+    first = client.get("/api/sessions/search-session/timeline?offset=0").json()
+    assert first["offset"] == 0
+    assert first["items"][0]["id"] == "m0"
+
+
+def test_search_covers_entire_session_and_returns_timeline_positions(
+    client: TestClient,
+) -> None:
+    """Search results span pages and point to the original chronological position."""
+    _store_search_session(client)
+    path = "/api/sessions/search-session/search"
+    response = client.get(path, params={"q": "cache"}).json()
+    assert response["total"] == 2
+    assert [item["timeline_offset"] for item in response["items"]] == [0, 101]
+    assert [item["kind"] for item in response["items"]] == ["user", "assistant"]
+    second = client.get(path, params={"q": "cache", "limit": 1, "offset": 1}).json()
+    assert second["total"] == 2
+    assert second["items"][0]["message_id"] == "m101"
+    assert "cache" in second["items"][0]["excerpt"]
+    for query in ("tool-secret", "reasoning-secret", "metadata-secret", "m101"):
+        assert client.get(path, params={"q": query}).json()["total"] == 0
+    for query in ("100%", "[a.*]", "AÇÃO"):
+        assert client.get(path, params={"q": query}).json()["total"] == 1
+    assert client.get(path, params={"q": "cache", "agent": "pi"}).status_code == 404
+    assert client.get(path, params={"q": " "}).status_code == 422
+    assert client.get(path, params={"q": "x" * 201}).status_code == 422
+    assert client.get(path, params={"q": "cache", "offset": -1}).status_code == 422
+    assert (
+        client.get("/api/sessions/missing/search", params={"q": "cache"}).status_code
+        == 404
+    )
+
+
 def test_event_queries_are_independent_from_session_projection(
     client: TestClient,
 ) -> None:
