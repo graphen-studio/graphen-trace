@@ -1,189 +1,142 @@
+import { ArrowLeft, ChevronLeft, ChevronRight, Folder, PanelRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { formatCost } from "../../utils/format";
+import { useSessionData } from "../../hooks/useSessionData";
+import type { InspectionSelection, SessionSearchResult } from "../../types/session";
+import { formatCost, formatCount } from "../../utils/format";
+import SessionInspector from "./SessionInspector";
+import { Timeline } from "./SessionTimeline";
+import SessionSearch from "./SessionSearch";
 
-interface Usage {
-  input_tokens: number | null;
-  output_tokens: number | null;
-  reasoning_tokens: number | null;
-  cache_read_tokens: number | null;
-  cache_write_tokens: number | null;
-}
-
-interface Session {
-  id: string;
-  title: string | null;
-  directory: string | null;
-  parent_id: string | null;
-  version: string | null;
-  source: string;
-  usage: Usage;
-  usage_incomplete: string[];
-  reported_cost: number | null;
-  cost_incomplete: boolean;
-  normalization_warnings?: string[];
-}
-
-interface Tool {
-  id: string;
-  name: string | null;
-  status: string | null;
-  started_at: string | null;
-  completed_at: string | null;
-  duration_ms: number | null;
-  exit_code: number | null;
-  child_session_id: string | null;
-  input?: unknown;
-  output?: unknown;
-  error?: unknown;
-  metadata?: Record<string, unknown>;
-}
-
-export interface TimelineItem {
-  id: string;
-  kind: string;
-  sequence: number | null;
-  created_at: string | null;
-  interaction_id: string | null;
-  interaction_source: string | null;
-  model: Record<string, string> | null;
-  finish: string | null;
-  usage: Usage | null;
-  tools: Tool[];
-  source: string;
-  raw_data?: Record<string, unknown>;
-  source_record?: Record<string, unknown>;
-  reported_cost?: number | null;
-  raw_payload?: unknown;
-  normalization_warnings?: string[];
-}
-
-function UsageValues({ usage }: { usage: Usage }) {
-  return <p>
-    Input: {usage.input_tokens ?? "—"} · Output: {usage.output_tokens ?? "—"}
-    {" · "}Reasoning: {usage.reasoning_tokens ?? "—"}
-    {" · "}Cache read: {usage.cache_read_tokens ?? "—"}
-    {" · "}Cache write: {usage.cache_write_tokens ?? "—"}
-  </p>;
-}
-
-export function Payload({ label, value }: { label: string; value: unknown }) {
-  if (value == null) return null;
-  return <details className="source-payload">
-    <summary>{label}</summary>
-    <pre>{typeof value === "string" ? value : JSON.stringify(value, null, 2)}</pre>
-  </details>;
-}
-
-function MessageContent({ data }: { data: Record<string, unknown> }) {
-  const parts = Array.isArray(data.content) ? data.content : [];
-  return <div className="message-content">
-    {typeof data.text === "string" && <pre>{data.text}</pre>}
-    {parts.map((part: Record<string, unknown>, index: number) => {
-      if (!part || typeof part !== "object") return <Payload key={index} label="Content" value={part} />;
-      if (part.type === "text" && typeof part.text === "string") return <pre key={index}>{part.text}</pre>;
-      if (part.type === "reasoning") return <Payload key={index} label="Reasoning" value={part.text ?? part} />;
-      if (part.type === "tool") return null;
-      return <Payload key={index} label={`Content: ${String(part.type ?? "unknown")}`} value={part} />;
-    })}
-  </div>;
-}
-
-export function Timeline({ items }: { items: TimelineItem[] }) {
-  return <ol className="timeline-list">
-    {items.map((item) => <li className="session-row" key={item.id}>
-      <h3>#{item.sequence ?? "Unknown order"} · {item.kind}</h3>
-      {item.normalization_warnings?.map((warning) => <p key={warning} role="status">{warning}</p>)}
-      <p>{item.created_at ? new Date(item.created_at).toLocaleString() : "Unknown time"}</p>
-      {item.model && <p>Model: {item.model.providerID} / {item.model.id}</p>}
-      {item.finish && <p>Finish: {item.finish}</p>}
-      {item.usage && <UsageValues usage={item.usage} />}
-      {item.reported_cost != null && <p>Agent-reported cost: {formatCost(item.reported_cost)} (currency/calculation unverified)</p>}
-      {item.raw_data && <MessageContent data={item.raw_data} />}
-      {item.interaction_id && <small>
-        Interaction: {item.interaction_id} (associated by {item.interaction_source})
-      </small>}
-      {item.tools.map((tool) => <div className="tool-execution" key={tool.id}>
-        <strong>{tool.name ?? "Unknown tool"}</strong>
-        <p>Status: {tool.status ?? "Unknown"} · Duration: {tool.duration_ms == null ? "—" : `${tool.duration_ms} ms`}
-          {" · "}Exit code: {tool.exit_code ?? "—"}</p>
-        <small>Call ID: {tool.id}</small>
-        <Payload label="Arguments" value={tool.input} />
-        <Payload label="Result" value={tool.output} />
-        <Payload label="Error" value={tool.error} />
-        <Payload label="Tool metadata" value={tool.metadata} />
-        {tool.child_session_id && <p><a href={`#/sessions/${encodeURIComponent(tool.child_session_id)}`}>Open child session</a></p>}
-      </div>)}
-      <small>Source: {item.source} · Message: {item.id}</small>
-      <Payload label="Complete native message" value={item.raw_data} />
-      <Payload label="Unrecognized native payload" value={item.raw_payload} />
-      <Payload label="Source record" value={item.source_record} />
-    </li>)}
-  </ol>;
-}
+export { Payload } from "./SessionInspector";
+export { Timeline } from "./SessionTimeline";
+export type { TimelineItem } from "../../types/session";
 
 export default function SessionDetails({ sessionId }: { sessionId: string }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [timeline, setTimeline] = useState<{ items: TimelineItem[]; total: number } | null>(null);
-  const [page, setPage] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const pageSize = 50;
+  const [page, setPage] = useState<number | null>(null);
+  const [inspectorOpen, setInspectorOpen] = useState(() => window.innerWidth > 1200);
+  const [selection, setSelection] = useState<InspectionSelection | null>(null);
+  const [query, setQuery] = useState("");
+  const [scrollTarget, setScrollTarget] = useState<string | null>(null);
+  const [searchTarget, setSearchTarget] = useState<string | null>(null);
+  const { session, timeline, error } = useSessionData(sessionId, page);
+  const currentPage = timeline ? Math.floor(timeline.offset / 50) : page ?? 0;
+  const lastPage = timeline ? Math.max(0, Math.ceil(timeline.total / 50) - 1) : 0;
+  const message = timeline?.items.find((item) => item.id === selection?.messageId) ?? null;
+  const tool = message?.tools.find((item) => item.id === selection?.toolId) ?? null;
 
   useEffect(() => {
-    const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout>;
-    setTimeline(null);
-    setError(null);
-    async function refresh() {
-      try {
-        const path = `/api/sessions/${encodeURIComponent(sessionId)}`;
-        const responses = await Promise.all([
-          fetch(path, { signal: controller.signal }),
-          fetch(`${path}/timeline?limit=${pageSize}&offset=${page * pageSize}`, { signal: controller.signal }),
-        ]);
-        if (responses.some((response) => response.status === 404)) throw new Error("Session not found or not synchronized yet.");
-        if (responses.some((response) => !response.ok)) throw new Error("Could not load session. Displayed data may be stale.");
-        const [details, events] = await Promise.all(responses.map((response) => response.json()));
-        if (!controller.signal.aborted) {
-          setSession(details);
-          setTimeline(events);
-          setError(null);
-        }
-      } catch (failure) {
-        if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "Local service unavailable.");
-      } finally {
-        if (!controller.signal.aborted) timer = setTimeout(refresh, 2000);
-      }
+    if (!scrollTarget || !timeline?.items.some((item) => item.id === scrollTarget)) return;
+    const element = document.getElementById(`session-message-${scrollTarget}`);
+    if (element) {
+      element.scrollIntoView({ block: "center" });
+      element.focus({ preventScroll: true });
+      setScrollTarget(null);
     }
-    void refresh();
-    return () => { controller.abort(); clearTimeout(timer); };
-  }, [sessionId, page]);
+  }, [scrollTarget, timeline]);
 
-  return <section className="sessions panel">
-    <div className="section-heading">
-      <div><a href="#">← Back to sessions</a><h2>{session?.title || sessionId}</h2></div>
-    </div>
-    <div className="collection-state">
-      <p>Full local capture. Content may include private code or secrets. Only data exposed by the source is available.</p>
+  useEffect(() => {
+    if (!inspectorOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setInspectorOpen(false);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [inspectorOpen]);
+
+  function inspect(next: InspectionSelection) {
+    setSelection(next);
+    setInspectorOpen(true);
+  }
+
+  function changePage(next: number) {
+    setSelection(null);
+    setScrollTarget(null);
+    setPage(next);
+  }
+
+  function openSearchResult(result: SessionSearchResult) {
+    setSelection(null);
+    setPage(Math.floor(result.timeline_offset / 50));
+    setSearchTarget(result.message_id);
+    setScrollTarget(result.message_id);
+  }
+
+  const metrics = session ? [
+    { label: "Input tokens", tone: "blue", value: formatCount(session.usage.input_tokens), partial: session.usage_incomplete.includes("input_tokens") },
+    { label: "Output tokens", tone: "blue", value: formatCount(session.usage.output_tokens), partial: session.usage_incomplete.includes("output_tokens") },
+    { label: "Reasoning", tone: "blue", value: formatCount(session.usage.reasoning_tokens), partial: session.usage_incomplete.includes("reasoning_tokens") },
+    { label: "Cache read", tone: "cyan", value: formatCount(session.usage.cache_read_tokens), partial: session.usage_incomplete.includes("cache_read_tokens") },
+    { label: "Cache write", tone: "cyan", value: formatCount(session.usage.cache_write_tokens), partial: session.usage_incomplete.includes("cache_write_tokens") },
+    { label: "Reported cost", tone: "green", value: formatCost(session.reported_cost), partial: session.cost_incomplete },
+  ] : [];
+
+  return (
+    <section className="session-explorer" aria-label="Session explorer">
+      <header className="session-header">
+        <a className="session-back" href="#"><ArrowLeft size={14} /> All sessions</a>
+        <div className="session-title-row">
+          <div>
+            <span className="inspector-eyebrow">SESSION EXPLORER</span>
+            <h1>{session?.title || sessionId}</h1>
+          </div>
+          <button
+            className="topbar-button"
+            type="button"
+            aria-expanded={inspectorOpen}
+            aria-controls="session-inspector"
+            onClick={() => setInspectorOpen((open) => !open)}
+          >
+            <PanelRight size={16} /> Details
+          </button>
+        </div>
+        <p className="session-project"><Folder size={14} />{session?.directory ?? "Project unavailable"}</p>
+      </header>
+
       {session && <>
-        <p>Directory: {session.directory ?? "Unknown"} · OpenCode: {session.version ?? "Unknown"}</p>
-        <UsageValues usage={session.usage} />
-        {session.normalization_warnings?.map((warning) => <p key={warning} role="status">{warning}</p>)}
-        {session.usage_incomplete.length > 0 && <p>Partial totals: {session.usage_incomplete.join(", ")}. Missing values are not treated as zero.</p>}
-        {session.reported_cost != null && <p>Agent-reported cost: {formatCost(session.reported_cost)}{session.cost_incomplete ? " (partial)" : ""} · Currency/calculation unverified; not confirmed billing.</p>}
-        <small>Source: {session.source}</small>
-        {session.parent_id && <p><a href={`#/sessions/${encodeURIComponent(session.parent_id)}`}>Open parent session</a></p>}
+        <dl className="session-summary panel" aria-label="Session consumption">
+          {metrics.map((metric) => <div className={`summary-tone-${metric.tone}`} key={metric.label}>
+            <dt>{metric.label}{metric.partial && <span className="metric-partial"> · partial</span>}</dt>
+            <dd>{metric.value}</dd>
+          </div>)}
+        </dl>
+        <p className="session-summary-note">This session only · Native token categories shown separately · Reported cost is not verified billing; currency/calculation unverified.</p>
+        {session.normalization_warnings.map((warning) => <p className="session-warning" role="status" key={warning}>{warning}</p>)}
       </>}
-      {error && <p role="alert">{error}</p>}
-      {!timeline && !error && <p role="status">Loading session…</p>}
-    </div>
-    {timeline && <>
-      <Timeline items={timeline.items} />
-      {timeline.total === 0 && <p className="collection-state">No timeline records have been synchronized.</p>}
-      <nav className="timeline-pagination" aria-label="Timeline pages">
-        <button className="filter" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</button>
-        <span>{timeline.total} records · Page {page + 1}</span>
-        <button className="filter" disabled={(page + 1) * pageSize >= timeline.total} onClick={() => setPage(page + 1)}>Next</button>
-      </nav>
-    </>}
-  </section>;
+
+      {error && <p className="session-warning" role="alert">{error}</p>}
+      <div className={`session-workspace${inspectorOpen && session ? " with-inspector" : ""}`}>
+        <div className="conversation-panel panel">
+          <div className="conversation-panel-heading">
+            <h2>Conversation</h2>
+            <div className="conversation-navigation">
+              <span>{timeline ? `${formatCount(timeline.total)} records` : "Loading…"}</span>
+              <button className="topbar-button" type="button" disabled={!timeline || currentPage === 0} onClick={() => changePage(0)}>Go to beginning</button>
+              <button className="topbar-button" type="button" disabled={!timeline || currentPage === lastPage} onClick={() => changePage(lastPage)}>Go to latest</button>
+            </div>
+          </div>
+          <SessionSearch sessionId={sessionId} query={query} onQueryChange={(value) => {
+            setQuery(value);
+            setSearchTarget(null);
+            setScrollTarget(null);
+          }} onResult={openSearchResult} />
+          {timeline ? <>
+            <Timeline items={timeline.items} selection={selection} onInspect={inspect} query={query} searchTarget={searchTarget} />
+            {timeline.total === 0 && <div className="session-conversation-empty">No messages have been synchronized for this session.</div>}
+            <nav className="session-pagination" aria-label="Timeline pages">
+              <button className="topbar-button" type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)}><ChevronLeft size={14} /> Previous</button>
+              <span>Page {formatCount(currentPage + 1)} of {formatCount(lastPage + 1)}</span>
+              <button className="topbar-button" type="button" disabled={currentPage === lastPage} onClick={() => changePage(currentPage + 1)}>Next <ChevronRight size={14} /></button>
+            </nav>
+          </> : <p className="session-conversation-empty" role="status">{error ? "Session data unavailable." : "Loading conversation…"}</p>}
+        </div>
+        {inspectorOpen && session && <SessionInspector
+          session={session}
+          message={message}
+          tool={tool}
+          onClose={() => setInspectorOpen(false)}
+          onSession={() => setSelection(null)}
+        />}
+      </div>
+    </section>
+  );
 }

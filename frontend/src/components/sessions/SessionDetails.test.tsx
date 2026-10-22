@@ -3,6 +3,18 @@ import { describe, expect, it } from "vitest";
 import { Payload, Timeline, type TimelineItem } from "./SessionDetails";
 
 describe("session timeline", () => {
+  it("marks the selected message and offers an explicit inspection action", () => {
+    const html = renderToStaticMarkup(<Timeline items={[{
+      id: "selected", kind: "user", sequence: 1, created_at: null,
+      interaction_id: null, interaction_source: null, model: null,
+      finish: null, usage: null, tools: [], source: "sqlite",
+      raw_data: { text: "Keep the conversation readable" },
+    }]} selection={{ messageId: "selected" }} onInspect={() => undefined} />);
+    expect(html).toContain("is-inspected");
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain("Keep the conversation readable");
+  });
+
   it("shows native tool states without interpreting completed as success", () => {
     const item: TimelineItem = {
       id: "message-1", kind: "assistant", sequence: 1, created_at: null,

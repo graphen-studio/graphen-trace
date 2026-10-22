@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Bot, Folder, MessageSquare, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { SessionSummary } from "../../types/api";
 import { formatCount } from "../../utils/format";
@@ -26,9 +26,9 @@ export default function SessionTable({ sessions }: { sessions: SessionSummary[] 
     );
   }, [query, sessions]);
 
-  return <section className="sessions panel">
+  return <section className="sessions sessions-overview panel">
     <div className="section-heading">
-      <div><h2>Sessions</h2><p>Latest observed agent sessions</p></div>
+       <div><h2>Sessions</h2><p>Latest observed agent sessions</p></div>
       <label className="session-search">
         <Search size={15} aria-hidden="true" />
         <input
@@ -55,14 +55,15 @@ export default function SessionTable({ sessions }: { sessions: SessionSummary[] 
             <a href={`#/sessions/${encodeURIComponent(session.id)}`}>
               {session.title || session.id}
             </a>
-            <small title={session.directory ?? undefined}>
-              {session.directory || session.id} · {session.source}
+             <small className="session-project-meta" title={session.directory ?? undefined}>
+               <Folder size={12} aria-hidden="true" />
+               <span>{session.directory || session.id} · {session.source}</span>
             </small>
           </td>
-          <td>{session.model?.id ?? "—"}</td>
-          <td className="numeric">{formatCount(session.message_count)}</td>
-          <td className="numeric">{formatCount(session.usage.input_tokens)}</td>
-          <td className="numeric">{formatCount(session.usage.output_tokens)}</td>
+          <td>{session.model?.id ? <span className="session-model-badge"><Bot size={13} aria-hidden="true" />{session.model.id}</span> : "—"}</td>
+          <td className="numeric"><span className="session-message-count"><MessageSquare size={12} aria-hidden="true" />{formatCount(session.message_count)}</span></td>
+          <td className="numeric"><span className={session.usage.input_tokens == null ? undefined : "session-token-badge"}>{formatCount(session.usage.input_tokens)}</span></td>
+          <td className="numeric"><span className={session.usage.output_tokens == null ? undefined : "session-token-badge"}>{formatCount(session.usage.output_tokens)}</span></td>
           <td>{formatUpdatedAt(session.updated_at)}</td>
         </tr>)}</tbody>
       </table>

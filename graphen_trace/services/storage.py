@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
+from graphen_trace.services.session_search import excerpt, message_text
+
 
 class Storage:
     """Stores one canonical native message/event payload per observation."""
@@ -179,6 +181,7 @@ class Storage:
         page: tuple[int, int],
         source: str = "opencode:sqlite:v2",
         agent: str = "opencode",
+        latest: bool = False,
     ) -> dict:
         """Returns compact source rows; normalization happens at the API boundary."""
         limit, offset = page
@@ -189,6 +192,8 @@ class Storage:
                 "WHERE agent=? AND source=? AND session_id=?",
                 (agent, source, session_id),
             ).fetchone()[0]
+            if latest:
+                offset = max(0, (total - 1) // limit) * limit
             rows = connection.execute(
                 "SELECT id, sequence, kind, time_created, time_updated, data "
                 "FROM observed_message WHERE agent=? AND source=? AND session_id=? "
@@ -206,7 +211,43 @@ class Storage:
                 for row in rows
             ],
             "total": total,
+            "offset": offset,
         }
+
+    def search_messages(
+        self,
+        session_id: str,
+        query: str,
+        page: tuple[int, int],
+        source: str,
+        agent: str,
+    ) -> dict:
+        """Searches all session text with bounded results and timeline positions."""
+        limit, offset = page
+        items = []
+        total = 0
+        needle = query.lower()
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT id, kind, data FROM observed_message "
+                "WHERE agent=? AND source=? AND session_id=? ORDER BY sequence, id",
+                (agent, source, session_id),
+            )
+            for position, (message_id, kind, payload) in enumerate(rows):
+                text = message_text(payload, kind)
+                if needle not in text.lower():
+                    continue
+                if offset <= total < offset + limit:
+                    items.append(
+                        {
+                            "message_id": message_id,
+                            "kind": kind,
+                            "timeline_offset": position,
+                            "excerpt": excerpt(text, query),
+                        }
+                    )
+                total += 1
+        return {"items": items, "total": total}
 
     def usage(self, agent: str = "opencode") -> dict:
         """Aggregates session summaries for one agent, not list pagination."""
