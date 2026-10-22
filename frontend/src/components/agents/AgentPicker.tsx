@@ -5,6 +5,7 @@ import { agentLabel } from "../../utils/agentLabel";
 interface AgentPickerProps {
   agents: AgentInstallation[];
   error: string | null;
+  notice?: string | null;
   selectingAgent: string | null;
   selectedAgent: string | null;
   onSelect: (agent: AgentInstallation) => void;
@@ -13,6 +14,7 @@ interface AgentPickerProps {
 export default function AgentPicker({
   agents,
   error,
+  notice,
   selectingAgent,
   selectedAgent,
   onSelect,
@@ -37,6 +39,7 @@ export default function AgentPicker({
       </div>
 
       {error && <p className="selection-error" role="alert">{error}</p>}
+      {notice && <p className="selection-notice" role="status">{notice}</p>}
 
       {agents.length > 0 ? (
         <div className="agent-grid">

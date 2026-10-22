@@ -52,12 +52,25 @@ export default function App() {
   const [serviceAvailable, setServiceAvailable] = useState<boolean | null>(null);
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [error, setError] = useState<string | null>(null);
+  const [selectionNotice, setSelectionNotice] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState(selectedSession);
   const dashboard = useDashboardData(Boolean(selectedAgent) && !showAgentPicker, selectedAgent);
   const sessions = dashboard.data?.sessions ?? [];
   const usage = dashboard.data?.usage ?? null;
   const liveCollection = dashboard.data?.liveCollection ?? null;
   const currentCollection = dashboard.data?.collection ?? collection;
+
+  useEffect(() => {
+    const status = dashboard.data?.collection;
+    if (status?.state !== "not_started" || status.agent !== null) return;
+
+    setCollection(status);
+    setSelectedAgent(null);
+    setShowAgentPicker(true);
+    setServiceAvailable(true);
+    setError(null);
+    setSelectionNotice("Collection is no longer active. Select an agent to start again. Your stored sessions remain available.");
+  }, [dashboard.data]);
 
   useEffect(() => {
     const navigate = () => setSessionId(selectedSession());
@@ -112,6 +125,7 @@ export default function App() {
       setCollection(result);
       setSelectedAgent(result.agent);
       setShowAgentPicker(false);
+      setSelectionNotice(null);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Could not start collection.");
     } finally {
@@ -161,12 +175,14 @@ export default function App() {
             <AgentPicker
               agents={agents}
               error={error}
+              notice={selectionNotice}
               selectingAgent={selectingAgent}
               selectedAgent={selectedAgent}
               onSelect={(agent) => void selectAgent(agent)}
             />
           ) : (
             <>
+              {!sessionId && <>
               <section className="intro">
                 <div>
                   <div className="eyebrow"><Activity size={14} /> AGENT OBSERVABILITY</div>
@@ -213,14 +229,12 @@ export default function App() {
                 </aside>
               )}
 
+              </>}
+
               {sessionId ? (
                 <>
                   <SessionDetails key={sessionId} sessionId={sessionId} />
-                  <p className="collection-state" role="status">
-                    {error || dashboard.error || (currentCollection
-                      ? `${currentCollection.state}: ${currentCollection.detail}`
-                      : "Connecting…")}
-                  </p>
+                  {(error || dashboard.error) && <p className="collection-state" role="alert">{error || dashboard.error}</p>}
                 </>
               ) : dashboard.data ? (
                 <SessionTable sessions={sessions} />
@@ -231,7 +245,7 @@ export default function App() {
                   <p>{dashboard.error || "Connecting to the local service…"}</p>
                 </section>
               )}
-              <footer>Local-first observability <span>·</span> Your data stays on this machine</footer>
+              <footer className="app-footer">Local-first observability <span>·</span> Your data stays on this machine</footer>
             </>
           )}
         </div>
