@@ -13,6 +13,9 @@ describe("JSON payload presentation", () => {
     expect(html).toContain('class="json-number"');
     expect(html).toContain('class="json-boolean"');
     expect(html).toContain('class="json-null"');
+    expect(html).toContain('aria-label="Copy JSON: Arguments"');
+    expect(html).toContain('class="payload-copy"');
+    expect(html).toContain("hidden=\"\"");
     expect(html).toContain("\n  ");
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");

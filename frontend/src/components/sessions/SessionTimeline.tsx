@@ -2,20 +2,93 @@ import { Bot, ChevronRight, SlidersHorizontal, Terminal, User } from "lucide-rea
 import type { InspectionSelection, TimelineItem } from "../../types/session";
 import { formatCount } from "../../utils/format";
 import { Payload } from "./SessionInspector";
-import { HighlightedText } from "./HighlightedText";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+interface MarkdownNode {
+  type: string;
+  value?: string;
+  tagName?: string;
+  properties?: Record<string, string[]>;
+  children?: MarkdownNode[];
+}
+
+function highlightSearchTerm(query: string) {
+  const term = query.trim();
+  if (!term) return [];
+  return [() => (tree: MarkdownNode) => {
+    function visit(node: MarkdownNode) {
+      if (!node.children) return;
+      node.children = node.children.flatMap((child) => {
+        if (child.type !== "text" || typeof child.value !== "string") {
+          visit(child);
+          return [child];
+        }
+        const pieces: MarkdownNode[] = [];
+        let remaining = child.value;
+        while (remaining.length > 0) {
+          const index = remaining.toLocaleLowerCase().indexOf(term.toLocaleLowerCase());
+          if (index < 0) {
+            pieces.push({ type: "text", value: remaining });
+            break;
+          }
+          if (index > 0) pieces.push({ type: "text", value: remaining.slice(0, index) });
+          pieces.push({
+            type: "element",
+            tagName: "mark",
+            properties: { className: ["session-search-highlight"] },
+            children: [{ type: "text", value: remaining.slice(index, index + term.length) }],
+          });
+          remaining = remaining.slice(index + term.length);
+        }
+        return pieces;
+      });
+    }
+    visit(tree);
+  }];
+}
+
+export function MarkdownContent({ source, query = "" }: { source: string; query?: string }) {
+  return (
+    <div className="markdown-content">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={highlightSearchTerm(query)} skipHtml>
+        {source}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+function ReasoningContent({ value, query }: { value: unknown; query: string }) {
+  if (value == null) return null;
+  if (typeof value === "string" && value.trim().length === 0) return null;
+  if (
+    typeof value === "object"
+    && !Array.isArray(value)
+    && Object.keys(value).every((key) => key === "type")
+  ) return null;
+  if (typeof value !== "string") {
+    return <Payload label="Reasoning" value={value} />;
+  }
+  return (
+    <details className="source-payload reasoning-payload">
+      <summary>Reasoning</summary>
+      <MarkdownContent source={value} query={query} />
+    </details>
+  );
+}
 
 function MessageContent({ data, query }: { data: Record<string, unknown>; query: string }) {
   const parts: unknown[] = Array.isArray(data.content) ? data.content : [];
   return (
     <div className="conversation-content">
-      {typeof data.text === "string" && <p className="conversation-text"><HighlightedText text={data.text} query={query} /></p>}
+      {typeof data.text === "string" && <MarkdownContent source={data.text} query={query} />}
       {parts.map((part, index) => {
         if (!part || typeof part !== "object") return <Payload key={index} label="Content" value={part} />;
         const content = part as Record<string, unknown>;
         if (content.type === "text" && typeof content.text === "string") {
-          return <p className="conversation-text" key={index}><HighlightedText text={content.text} query={query} /></p>;
+          return <MarkdownContent source={content.text} query={query} key={index} />;
         }
-        if (content.type === "reasoning") return <Payload key={index} label="Reasoning" value={content.text ?? content} />;
+        if (content.type === "reasoning") return <ReasoningContent key={index} value={content.text ?? content} query={query} />;
         if (content.type === "tool") return null;
         return <Payload key={index} label={`Content: ${String(content.type ?? "unknown")}`} value={content} />;
       })}

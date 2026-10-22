@@ -58,7 +58,34 @@
 .message-inspect-button { display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid transparent; border-radius: 5px; color: var(--muted); background: transparent; font-size: 10px; }
 .message-inspect-button:hover, .message-inspect-button[aria-pressed="true"] { color: var(--accent); border-color: var(--border); background: var(--accent-soft); }
 .conversation-message-body { padding: 4px 20px 18px 57px; }
-.conversation-text { margin: 12px 0; color: var(--text-strong); font-size: 13px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+.markdown-content { min-width: 0; color: var(--text-strong); font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.markdown-content > :first-child { margin-top: 12px; }
+.markdown-content > :last-child { margin-bottom: 0; }
+.markdown-content p { margin: 10px 0; white-space: pre-wrap; }
+.markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4 { margin: 22px 0 10px; color: var(--text); font-weight: 650; line-height: 1.4; }
+.markdown-content h1 { font-size: 19px; }
+.markdown-content h2 { font-size: 16px; }
+.markdown-content h3, .markdown-content h4 { font-size: 14px; }
+.markdown-content ul, .markdown-content ol { display: grid; gap: 6px; padding-left: 22px; margin: 12px 0; }
+.markdown-content li { padding-left: 3px; }
+.markdown-content li::marker { color: var(--accent); }
+.markdown-content a { color: var(--accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); text-underline-offset: 3px; }
+.markdown-content blockquote { margin: 14px 0; padding: 4px 14px; border-left: 2px solid var(--accent); color: var(--muted); background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
+.markdown-content blockquote > :first-child { margin-top: 6px; }
+.markdown-content blockquote > :last-child { margin-bottom: 6px; }
+.markdown-content hr { height: 1px; margin: 18px 0; border: 0; background: var(--border); }
+.markdown-content :not(pre) > code { padding: 2px 5px; border: 1px solid var(--border); border-radius: 4px; color: var(--cyan-color); background: var(--code-surface); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+.markdown-content pre { max-width: 100%; margin: 14px 0; padding: 14px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; color: var(--text-soft); background: var(--code-surface); font-size: 11px; line-height: 1.65; tab-size: 2; }
+.markdown-content pre code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.markdown-content table { display: block; max-width: 100%; margin: 14px 0; overflow-x: auto; border-collapse: collapse; font-size: 12px; }
+.markdown-content th, .markdown-content td { padding: 8px 10px; border: 1px solid var(--border); text-align: left; }
+.markdown-content th { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.markdown-content tr:nth-child(even) td { background: color-mix(in srgb, var(--panel-raised) 65%, transparent); }
+.markdown-content input[type="checkbox"] { margin-right: 7px; accent-color: var(--accent); }
+.reasoning-payload { padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--purple-color) 24%, var(--border)); border-radius: 7px; background: color-mix(in srgb, var(--purple-soft) 18%, var(--panel)); }
+.reasoning-payload summary { color: var(--purple-color); }
+.reasoning-payload[open] summary { margin-bottom: 10px; }
+.reasoning-payload .markdown-content { font-size: 12px; }
 .conversation-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px 0 0; color: var(--muted); font-size: 10px; }
 .message-token-values { display: flex; flex-wrap: wrap; gap: 6px 12px; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
 .message-token-values > span { padding: 3px 6px; border-radius: 4px; }
@@ -101,11 +128,10 @@
 .inspector-note { margin: 0 0 18px; color: var(--muted); font-size: 11px; line-height: 1.7; }
 .inspector-link, .inspector-back { display: inline-flex; align-items: center; gap: 5px; margin-bottom: 18px; color: var(--accent); font-size: 11px; }
 .inspector-back { padding: 0; border: 0; background: transparent; }
-.inspector-body .source-payload { padding: 0; margin: 10px 0; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; font-size: 11px; }
-.inspector-body .source-payload summary { padding: 11px 12px; color: var(--accent); background: var(--input-surface); }
-.inspecting-tool .source-payload summary { color: var(--tool-accent); }
-.inspector-body .source-payload[open] summary { border-bottom: 1px solid var(--border); }
-.inspector-body .source-payload pre { margin: 0; padding: 14px; border-radius: 0; font-size: 11px; line-height: 1.8; }
+.inspector-body .source-payload { margin: 10px 0; font-size: 11px; }
+.inspector-body .payload-toggle { color: var(--accent); }
+.inspecting-tool .payload-toggle { color: var(--tool-accent); }
+.inspector-body .source-payload pre { padding: 14px; font-size: 11px; line-height: 1.8; }
 .source-payload .payload-format { float: right; margin-left: 8px; color: var(--muted); font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: .05em; }
 .source-payload .json-payload { tab-size: 2; }
 .json-payload code { font: inherit; }

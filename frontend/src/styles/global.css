@@ -11,9 +11,17 @@
 .tool-execution strong { font-size: 13px; }
 .timeline-pagination { display: flex; align-items: center; gap: 16px; padding: 16px 22px; font-size: 12px; }
 .timeline-pagination button:disabled { opacity: .4; cursor: default; }
-.source-payload { margin: 10px 0; font-size: 12px; }
-.source-payload summary { color: var(--accent); cursor: pointer; }
-.source-payload pre, .message-content pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 32rem; overflow: auto; padding: 12px; background: var(--code-surface); color: var(--text-strong); font-size: 12px; border-radius: 6px; }
+.source-payload { margin: 10px 0; overflow: hidden; border: 1px solid var(--border); border-radius: 7px; background: var(--panel); font-size: 12px; }
+.payload-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--input-surface); }
+.payload-toggle, .payload-copy { display: inline-flex; min-height: 36px; align-items: center; gap: 7px; border: 0; color: var(--text-soft); background: transparent; cursor: pointer; }
+.payload-toggle { min-width: 0; flex: 1; padding: 0 10px; text-align: left; }
+.payload-toggle:hover { color: var(--accent); }
+.payload-chevron { flex: 0 0 auto; color: var(--muted); transition: transform .15s ease; }
+.payload-chevron.expanded { transform: rotate(90deg); }
+.payload-copy { flex: 0 0 auto; margin-right: 5px; padding: 0 8px; border: 1px solid transparent; border-radius: 5px; color: var(--muted); font-size: 10px; }
+.payload-copy:hover { border-color: var(--border); color: var(--accent); background: var(--panel); }
+.payload-content[hidden] { display: none; }
+.source-payload pre { max-height: 32rem; margin: 0; padding: 12px; overflow: auto; border-radius: 0; background: var(--code-surface); color: var(--text-strong); font-size: 12px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .session-table-scroll { overflow-x: auto; }
 .session-table { width: 100%; border-collapse: collapse; text-align: left; }
 .session-table th { padding: 12px 16px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
