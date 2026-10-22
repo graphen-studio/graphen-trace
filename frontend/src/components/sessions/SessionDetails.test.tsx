@@ -1,8 +1,75 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Payload, Timeline, type TimelineItem } from "./SessionDetails";
+import { MarkdownContent } from "./SessionTimeline";
 
 describe("session timeline", () => {
+  it("renders common Markdown structures and leaves raw HTML inert", () => {
+    const html = renderToStaticMarkup(<MarkdownContent source={[
+      "## Change summary",
+      "",
+      "- **Cache** reuse",
+      "- `tokens`",
+      "",
+      "| Metric | Value |",
+      "| --- | ---: |",
+      "| Input | 123 |",
+      "",
+      "```python",
+      "print('safe')",
+      "```",
+      "",
+      "<script>alert('unsafe')</script>",
+    ].join("\n")} />);
+
+    expect(html).toContain("<h2>Change summary</h2>");
+    expect(html).toContain("<strong>Cache</strong>");
+    expect(html).toContain("<table>");
+    expect(html).toContain("<pre><code class=\"language-python\">print(&#x27;safe&#x27;)");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("alert('unsafe')");
+  });
+
+  it("keeps session search highlighting inside rendered Markdown", () => {
+    const html = renderToStaticMarkup(
+      <MarkdownContent source="**Cache** is reused" query="cache" />,
+    );
+    expect(html).toContain("<strong><mark class=\"session-search-highlight\">Cache</mark></strong>");
+  });
+
+  it("renders text reasoning as collapsed Markdown without enabling raw HTML", () => {
+    const html = renderToStaticMarkup(<Timeline items={[{
+      id: "reasoning-message", kind: "assistant", sequence: 1,
+      created_at: null, interaction_id: null, interaction_source: null,
+      model: null, finish: null, usage: null, tools: [], source: "sqlite",
+      raw_data: { content: [{
+        type: "reasoning",
+        text: "## Hypothesis\n\n- **Reuse** context\n\n<script>alert('unsafe')</script>",
+      }] },
+    }]} />);
+
+    expect(html).toContain("<summary>Reasoning</summary>");
+    const detailsTag = html.match(/<details\b[^>]*reasoning-payload[^>]*>/)?.[0] ?? "";
+    expect(detailsTag).not.toContain("open");
+    expect(html).toContain("<h2>Hypothesis</h2>");
+    expect(html).toContain("<strong>Reuse</strong>");
+    expect(html).not.toContain("<script>");
+  });
+
+  it("does not render empty or whitespace-only reasoning collapses", () => {
+    const html = renderToStaticMarkup(<Timeline items={[{
+      id: "empty-reasoning", kind: "assistant", sequence: 1,
+      created_at: null, interaction_id: null, interaction_source: null,
+      model: null, finish: null, usage: null, tools: [], source: "sqlite",
+      raw_data: { content: [
+        { type: "reasoning", text: "" },
+        { type: "reasoning", text: " \n  " },
+        { type: "reasoning" },
+      ] },
+    }]} />);
+    expect(html).not.toContain("<summary>Reasoning</summary>");
+  });
+
   it("marks the selected message and offers an explicit inspection action", () => {
     const html = renderToStaticMarkup(<Timeline items={[{
       id: "selected", kind: "user", sequence: 1, created_at: null,
