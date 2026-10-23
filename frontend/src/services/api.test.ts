@@ -20,6 +20,21 @@ describe("session navigation API", () => {
     expect(fetchMock.mock.calls.some(([path]) => path.includes("latest=true"))).toBe(false);
   });
 
+  it("passes Pi selection to session detail and timeline requests", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ offset: 0 }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await getSessionSnapshot("pi-session", null, new AbortController().signal, "pi");
+
+    const paths = fetchMock.mock.calls.map(([path]) => path as string);
+    expect(paths).toContain("/api/sessions/pi-session?agent=pi");
+    expect(paths).toContain(
+      "/api/sessions/pi-session/timeline?limit=50&latest=true&agent=pi",
+    );
+  });
+
   it("encodes search terms and requests result pages independently", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true, json: async () => ({ items: [], total: 0 }),
@@ -33,6 +48,18 @@ describe("session navigation API", () => {
     expect(url.searchParams.get("q")).toBe("100% & cache");
     expect(url.searchParams.get("offset")).toBe("20");
     expect(init.signal).toBe(signal);
+  });
+
+  it("includes the selected agent when searching a Pi session", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [], total: 0 }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await searchSession("pi-session", "tool output", 0, new AbortController().signal, "pi");
+    const url = new URL(fetchMock.mock.calls[0][0], "http://localhost");
+
+    expect(url.searchParams.get("agent")).toBe("pi");
   });
 
   it("explains when the running backend still uses the old timeline contract", async () => {

@@ -56,6 +56,19 @@ describe("session timeline", () => {
     expect(html).not.toContain("<script>");
   });
 
+  it("renders Pi thinking blocks as collapsed reasoning", () => {
+    const html = renderToStaticMarkup(<Timeline items={[{
+      id: "pi-thinking", kind: "assistant", sequence: 1,
+      created_at: null, interaction_id: "user-1", interaction_source: "file_order",
+      model: { model: "test-model" }, finish: "stop", usage: null,
+      tools: [], source: "pi:session-jsonl:v1",
+      raw_data: { role: "assistant", content: [{ type: "thinking", thinking: "Private reasoning" }] },
+    }]} />);
+
+    expect(html).toContain("<summary>Reasoning</summary>");
+    expect(html).toContain("Private reasoning");
+  });
+
   it("does not render empty or whitespace-only reasoning collapses", () => {
     const html = renderToStaticMarkup(<Timeline items={[{
       id: "empty-reasoning", kind: "assistant", sequence: 1,

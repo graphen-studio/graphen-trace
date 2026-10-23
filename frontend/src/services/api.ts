@@ -75,11 +75,13 @@ export async function getSessionSnapshot(
   sessionId: string,
   page: number | null,
   signal: AbortSignal,
+  agent = "opencode",
 ): Promise<{ session: SessionDetail; timeline: TimelinePage }> {
   const path = `/api/sessions/${encodeURIComponent(sessionId)}`;
+  const query = agent === "opencode" ? "" : `?agent=${encodeURIComponent(agent)}`;
   const [session, timeline] = await Promise.all([
-    request<SessionDetail>(path, { signal }),
-    request<TimelinePage>(`${path}/timeline?limit=50&${page == null ? "latest=true" : `offset=${page * 50}`}`, { signal }),
+    request<SessionDetail>(`${path}${query}`, { signal }),
+    request<TimelinePage>(`${path}/timeline?limit=50&${page == null ? "latest=true" : `offset=${page * 50}`}${query ? `&${query.slice(1)}` : ""}`, { signal }),
   ]);
   if (!Number.isInteger(timeline.offset) || timeline.offset < 0) {
     throw new Error("Session pagination requires the updated API. Restart graphen-trace serve and reload this page.");
@@ -92,7 +94,9 @@ export function searchSession(
   query: string,
   offset: number,
   signal: AbortSignal,
+  agent = "opencode",
 ): Promise<SessionSearchResponse> {
   const params = new URLSearchParams({ q: query, limit: "20", offset: String(offset) });
+  if (agent !== "opencode") params.set("agent", agent);
   return request<SessionSearchResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/search?${params}`, { signal });
 }
