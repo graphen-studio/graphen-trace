@@ -6,13 +6,14 @@ import {
 } from "lucide-react";
 
 interface SidebarProps {
-  active: boolean;
+  activePage: "sessions" | "resources" | null;
   sessionsEnabled: boolean;
   serviceStatus: "connecting" | "connected" | "unavailable";
   onSessions: () => void;
+  onResources: () => void;
 }
 
-export default function Sidebar({ active, sessionsEnabled, serviceStatus, onSessions }: SidebarProps) {
+export default function Sidebar({ activePage, sessionsEnabled, serviceStatus, onSessions, onResources }: SidebarProps) {
   const statusLabel = {
     connecting: "Connecting",
     connected: "Connected",
@@ -25,10 +26,10 @@ export default function Sidebar({ active, sessionsEnabled, serviceStatus, onSess
         <div className="sidebar-section">
           <p className="sidebar-section-label">Observe</p>
           <button
-            className={`sidebar-item${active ? " active" : ""}`}
+            className={`sidebar-item${activePage === "sessions" ? " active" : ""}`}
             type="button"
             disabled={!sessionsEnabled}
-            aria-current={active ? "page" : undefined}
+            aria-current={activePage === "sessions" ? "page" : undefined}
             onClick={onSessions}
           >
             <Activity size={17} aria-hidden="true" />
@@ -43,13 +44,17 @@ export default function Sidebar({ active, sessionsEnabled, serviceStatus, onSess
 
         <div className="sidebar-section">
           <p className="sidebar-section-label">Agent workspace</p>
-          <button className="sidebar-item upcoming" type="button" disabled>
+          <button
+            className={`sidebar-item${activePage === "resources" ? " active" : ""}`}
+            type="button"
+            aria-current={activePage === "resources" ? "page" : undefined}
+            onClick={onResources}
+          >
             <Boxes size={17} aria-hidden="true" />
             <span className="sidebar-item-copy">
               <span>Agent resources</span>
-              <small>Skills · Steerings · Hooks</small>
+              <small>Skills by agent and scope</small>
             </span>
-            <span className="sidebar-badge">Soon</span>
           </button>
           <button className="sidebar-item upcoming" type="button" disabled>
             <RadioTower size={17} aria-hidden="true" />

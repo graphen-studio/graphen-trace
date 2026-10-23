@@ -5,8 +5,8 @@ import contextlib
 import logging
 import sqlite3
 
-from graphen_trace.adapters.registry import ADAPTERS
 from graphen_trace.adapters.opencode.source import OpenCodeSource
+from graphen_trace.adapters.registry import ADAPTERS
 from graphen_trace.config.settings import Settings
 from graphen_trace.services.collector import Collector
 from graphen_trace.services.discovery import AgentInstallation

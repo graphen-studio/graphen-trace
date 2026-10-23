@@ -5,6 +5,19 @@ export interface AgentInstallation {
   adapter: boolean;
 }
 
+export interface AgentSkill {
+  name: string;
+  description: string;
+  scope: "project" | "global";
+  path: string;
+  content: string;
+  agents: { id: string; name: string }[];
+}
+
+export interface AgentResourceList {
+  items: AgentSkill[];
+}
+
 export interface CollectionStatus {
   state: string;
   detail: string;

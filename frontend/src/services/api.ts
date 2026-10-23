@@ -5,8 +5,13 @@ import type {
   SessionSummary,
   UsageSummary,
   LiveCollectionStatus,
+  AgentResourceList,
 } from "../types/api";
 import type { SessionDetail, SessionSearchResponse, TimelinePage } from "../types/session";
+
+export function getAgentResources(signal?: AbortSignal): Promise<AgentResourceList> {
+  return request<AgentResourceList>("/api/resources", { signal });
+}
 
 function errorDetail(detail: unknown): string | null {
   if (typeof detail === "string") return detail;
