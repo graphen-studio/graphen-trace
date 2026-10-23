@@ -21,7 +21,7 @@
 
 **Graphen Trace** captures and explores coding-agent activity across sessions, messages, model usage, tool execution, and live events. It stores observations in a local SQLite database and provides a dashboard backed by the Graphen API.
 
-The current passive collector reads OpenCode's local SQLite database and, when available, observes its existing local service event stream. Collection is read-only: Graphen Trace does not edit agent configuration or start, stop, or reconfigure the OpenCode service.
+The passive collectors read OpenCode's local SQLite database and, when available, observe its existing local service event stream. The Pi adapter reads local session JSONL files. Collection is read-only: Graphen Trace does not edit agent configuration or start agent processes.
 
 ## Features
 
@@ -29,7 +29,7 @@ The current passive collector reads OpenCode's local SQLite database and, when a
 - **Token and cost visibility:** Inspect native usage categories and agent-reported cost, with missing or partial data clearly identified.
 - **Live event observation:** Persist events from an already-running local OpenCode service and expose connection health and possible gaps.
 - **Local dashboard and API:** Explore synchronized data through the web dashboard and documented HTTP endpoints.
-- **Read-only collection:** Read the OpenCode SQLite source without changing agent configuration or source records.
+- **Read-only collection:** Read OpenCode SQLite and Pi session files without changing agent configuration or source records.
 - **Local-first storage:** Keep captured data in a Graphen SQLite database on your machine.
 - **Compatibility reporting:** Surface warnings and partial collection status when source versions or individual records cannot be fully interpreted.
 

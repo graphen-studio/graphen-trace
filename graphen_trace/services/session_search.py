@@ -13,6 +13,8 @@ def message_text(payload: str, kind: str) -> str:
         return ""
     if not isinstance(data, dict):
         return ""
+    if isinstance(data.get("message"), dict):
+        data = data["message"]
     texts = [data["text"]] if isinstance(data.get("text"), str) else []
     content = data.get("content")
     if isinstance(content, list):

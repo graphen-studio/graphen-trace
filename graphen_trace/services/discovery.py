@@ -21,7 +21,7 @@ AGENTS = {
     "claude": False,
     "codex": False,
     "kiro": False,
-    "pi": False,
+    "pi": True,
 }
 
 

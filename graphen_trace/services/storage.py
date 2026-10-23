@@ -259,13 +259,17 @@ class Storage:
             "reported_cost": None,
             "cost_incomplete": False,
             "agent": agent,
-            "source": f"{agent}:sqlite",
+            "source": (
+                "opencode:sqlite:v2"
+                if agent == "opencode"
+                else f"{agent}:session-jsonl:v1"
+            ),
         }
         incomplete = set()
         with self.connect() as connection:
             rows = connection.execute(
                 "SELECT data FROM observed_session WHERE agent=? AND source LIKE ?",
-                (agent, f"{agent}:%sqlite%"),
+                (agent, f"{agent}:%"),
             )
             for (payload,) in rows:
                 record = json.loads(payload)

@@ -14,6 +14,8 @@ COVERAGE = "Full SQLite capture; live-event coverage is reported separately"
 class Collector:
     """Imports complete source records alongside normalized session projections."""
 
+    agent_name = AGENT
+
     def __init__(self, source: OpenCodeSource, storage: Storage) -> None:
         self.source = source
         self.storage = storage

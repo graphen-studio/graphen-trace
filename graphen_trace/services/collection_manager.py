@@ -6,6 +6,8 @@ import logging
 import sqlite3
 
 from graphen_trace.adapters.opencode.source import OpenCodeSource
+from graphen_trace.adapters.pi.collector import PiCollector
+from graphen_trace.adapters.pi.source import PiSource
 from graphen_trace.adapters.registry import ADAPTERS
 from graphen_trace.config.settings import Settings
 from graphen_trace.services.collector import Collector
@@ -28,7 +30,7 @@ class CollectionManager:
         self.agents = agents
         self.settings = settings
         self.storage = storage
-        self.collector: Collector | None = None
+        self.collector: Collector | PiCollector | None = None
         self.live_collector: LiveCollector | None = None
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
@@ -50,7 +52,7 @@ class CollectionManager:
                 "version": None,
                 "capabilities": {},
             }
-        return {**self.collector.status, "agent": "opencode"}
+        return {**self.collector.status, "agent": self.collector.agent_name}
 
     async def start(self, agent_name: str) -> dict:
         """Selects an installed supported agent, switching collectors if needed."""
@@ -61,11 +63,7 @@ class CollectionManager:
             )
             if installation is None:
                 raise LookupError(f"Agent is not installed: {agent_name}")
-            if (
-                not installation.adapter
-                or agent_name not in ADAPTERS
-                or agent_name != "opencode"
-            ):
+            if not installation.adapter or agent_name not in ADAPTERS:
                 raise ValueError(
                     f"Agent does not have a collection adapter: {agent_name}"
                 )
@@ -75,16 +73,21 @@ class CollectionManager:
 
             await self._stop_selected()
 
-            source = OpenCodeSource(
-                self.settings.opencode_database, installation.version or ""
-            )
-            self.collector = Collector(source, self.storage)
-            self.live_collector = LiveCollector(self.settings, self.storage)
+            if agent_name == "opencode":
+                source = OpenCodeSource(
+                    self.settings.opencode_database, installation.version or ""
+                )
+                self.collector = Collector(source, self.storage)
+                self.live_collector = LiveCollector(self.settings, self.storage)
+            elif agent_name == "pi":
+                source = PiSource(self.settings.pi_sessions_dir, installation.version)
+                self.collector = PiCollector(source, self.storage)
             self._stop = asyncio.Event()
             self._task = asyncio.create_task(
                 _collect(self.collector, self._stop, self.settings.poll_interval)
             )
-            self._live_task = asyncio.create_task(self.live_collector.run())
+            if self.live_collector is not None:
+                self._live_task = asyncio.create_task(self.live_collector.run())
             return self.status
 
     async def stop(self) -> None:
@@ -108,7 +111,7 @@ class CollectionManager:
 
 
 async def _collect(
-    collector: Collector, stop: asyncio.Event, poll_interval: float
+    collector: Collector | PiCollector, stop: asyncio.Event, poll_interval: float
 ) -> None:
     """Runs bounded polling and keeps source failures visible without stopping API."""
     while not stop.is_set():
@@ -120,7 +123,9 @@ async def _collect(
             )
             collector.status.update(state="unavailable", detail=str(error))
             if changed:
-                LOGGER.warning("OpenCode collection unavailable: %s", error)
+                LOGGER.warning(
+                    "%s collection unavailable: %s", collector.agent_name, error
+                )
         try:
             await asyncio.wait_for(stop.wait(), timeout=poll_interval)
         except TimeoutError:
