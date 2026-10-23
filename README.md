@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="frontend/public/logo-text-light.png" alt="Graphen Trace" width="420">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/logo-text-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="frontend/public/logo-text-light.png">
+    <img src="frontend/public/logo-text-light.png" alt="Graphen Trace" width="420">
+  </picture>
 </p>
 
 <p align="center">
