@@ -137,7 +137,7 @@ export default function App() {
 
   function openSessions() {
     setActivePage("sessions");
-    setShowAgentPicker(false);
+    setShowAgentPicker(!selectedAgent);
     setSessionId(null);
     if (window.location.hash) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
@@ -178,7 +178,7 @@ export default function App() {
       <div className="app-layout">
         <Sidebar
           activePage={!showAgentPicker ? activePage : null}
-          sessionsEnabled={Boolean(selectedAgent)}
+          sessionsEnabled={serviceAvailable !== false}
           serviceStatus={serviceStatus}
           onSessions={openSessions}
           onResources={openResources}

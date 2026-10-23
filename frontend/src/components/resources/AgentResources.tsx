@@ -83,14 +83,14 @@ export function AgentResourcesContent({
                   <span className="resource-item-icon"><FileText size={15} aria-hidden="true" /></span>
                   <span className="resource-item-copy">
                     <strong>{item.name}</strong>
-                    <span className={`resource-scope-badge scope-${item.scope}`}>
-                      <ScopeIcon size={11} aria-hidden="true" />
-                      {item.scope === "global" ? "Global" : "Project"}
-                    </span>
-                    <span className="resource-item-agents">
-                      {item.agents.map((agent) => (
-                        <span className="resource-agent-badge" key={agent.id}>{agent.name}</span>
-                      ))}
+                    <span className="resource-item-meta">
+                      <span className="resource-scope-label">
+                        <ScopeIcon size={11} aria-hidden="true" />
+                        {item.scope === "global" ? "Global" : "Project"}
+                      </span>
+                      <span className="resource-support-label">
+                        {item.agents.map((agent) => agent.name).join(" · ")}
+                      </span>
                     </span>
                   </span>
                 </button>

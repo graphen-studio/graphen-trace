@@ -13,13 +13,15 @@
 .resource-item:hover, .resource-item.active { background: color-mix(in srgb, var(--accent-soft) 48%, var(--panel)); }
 .resource-item.active { box-shadow: inset 2px 0 var(--accent); }
 .resource-item-icon { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border: 1px solid var(--border); border-radius: 7px; color: var(--accent); background: var(--accent-soft); }
-.resource-item-copy { display: grid; min-width: 0; grid-template-columns: max-content minmax(0, 1fr); align-items: center; gap: 7px 5px; }
-.resource-item-copy strong { grid-column: 1 / -1; overflow: hidden; color: var(--text-strong); font-size: 12px; text-overflow: ellipsis; }
+.resource-item-copy { display: grid; min-width: 0; gap: 5px; }
+.resource-item-copy strong { overflow: hidden; color: var(--text-strong); font-size: 12px; text-overflow: ellipsis; }
+.resource-item-meta { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 4px 9px; }
+.resource-scope-label, .resource-support-label { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 9px; line-height: 1.3; }
+.resource-support-label { color: color-mix(in srgb, var(--status-success) 72%, var(--muted)); }
 .resource-scope-badge, .resource-agent-badge { display: inline-flex; min-height: 22px; align-items: center; gap: 5px; padding: 3px 7px; border: 1px solid var(--border); border-radius: 5px; font-size: 9px; font-weight: 650; line-height: 1.25; white-space: nowrap; }
 .resource-scope-badge { width: fit-content; text-transform: uppercase; letter-spacing: .04em; }
 .resource-scope-badge.scope-project { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); color: var(--accent); background: var(--accent-soft); }
 .resource-scope-badge.scope-global { border-color: color-mix(in srgb, var(--status-warning) 43%, var(--border)); color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 10%, var(--panel)); }
-.resource-item-agents { display: flex; min-width: 0; flex-wrap: wrap; gap: 4px; }
 .resource-agent-badge { min-height: 21px; border-color: color-mix(in srgb, var(--status-success) 36%, var(--border)); color: var(--status-success); background: var(--status-success-soft); font-size: 8px; }
 .resource-agent-badge.prominent { min-height: 28px; padding: 5px 9px; font-size: 10px; }
 .resource-agent-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--status-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-success) 13%, transparent); }
