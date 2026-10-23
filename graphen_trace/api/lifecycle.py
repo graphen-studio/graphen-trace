@@ -2,6 +2,7 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI
@@ -22,6 +23,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     storage = Storage(settings.database_path)
     await asyncio.to_thread(storage.initialize)
     app.state.storage = storage
+    app.state.project_directory = Path.cwd()
 
     agents = await asyncio.to_thread(discover_agents)
     app.state.collection_manager = CollectionManager(agents, settings, storage)

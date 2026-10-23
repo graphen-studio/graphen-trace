@@ -12,6 +12,7 @@ from graphen_trace.adapters.opencode.events import decode_frame
 from graphen_trace.api import lifecycle
 from graphen_trace.api.app import create_app
 from graphen_trace.api.routes import frontend
+from graphen_trace.api.routes import resources as resource_routes
 from graphen_trace.services.discovery import AgentInstallation
 
 
@@ -37,6 +38,40 @@ def test_health_route_is_served(client: TestClient) -> None:
     """Health route returns service status."""
     assert client.get("/api/health").json()["status"] == "ok"
     assert client.get("/api/not-implemented").status_code == 404
+
+
+def test_resources_endpoint_returns_discovery_without_storage(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Resource API exposes provider data and does not create a resource table."""
+    resource = {
+        "scope": "project",
+        "name": "review",
+        "description": "Review changes",
+        "path": str(tmp_path / "SKILL.md"),
+        "content": "# Review",
+        "agents": [{"id": "opencode", "name": "OpenCode"}],
+    }
+    monkeypatch.setattr(
+        resource_routes,
+        "discover_resources",
+        lambda project_directory: [resource],
+    )
+
+    response = client.get("/api/resources")
+
+    assert response.status_code == 200
+    assert response.json() == {"items": [resource]}
+    with client.app.state.storage.connect() as connection:
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+    assert not any("resource" in table for table in tables)
 
 
 def test_frontend_is_served(
