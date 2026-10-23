@@ -3,22 +3,23 @@ import { describe, expect, it } from "vitest";
 import Sidebar from "./Sidebar";
 
 describe("sidebar navigation", () => {
-  it("keeps planned areas visible but unavailable", () => {
+  it("enables agent resources and keeps future areas unavailable", () => {
     const html = renderToStaticMarkup(
       <Sidebar
-        active
+        activePage="sessions"
         sessionsEnabled
         serviceStatus="connected"
         onSessions={() => undefined}
+        onResources={() => undefined}
       />,
     );
 
     expect(html).toContain('aria-label="Main navigation"');
     expect(html).toContain('aria-current="page"');
     expect(html).toContain("Agent resources");
-    expect(html).toContain("Skills · Steerings · Hooks");
+    expect(html).toContain("Skills by agent and scope");
     expect(html).toContain("Live proxy");
     expect(html).toContain("Dashboards");
-    expect(html.match(/disabled=""/g)).toHaveLength(3);
+    expect(html.match(/disabled=""/g)).toHaveLength(2);
   });
 });

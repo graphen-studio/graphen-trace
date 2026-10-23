@@ -73,7 +73,10 @@ export default function SessionDetails({ sessionId }: { sessionId: string }) {
   return (
     <section className="session-explorer" aria-label="Session explorer">
       <header className="session-header">
-        <a className="session-back" href="#"><ArrowLeft size={14} /> All sessions</a>
+        <a className="session-back" href="#" aria-label="Back to all sessions">
+          <span className="session-back-icon"><ArrowLeft size={16} aria-hidden="true" /></span>
+          <span className="session-back-copy">All sessions</span>
+        </a>
         <div className="session-title-row">
           <div>
             <span className="inspector-eyebrow">SESSION EXPLORER</span>

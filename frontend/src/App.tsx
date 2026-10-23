@@ -5,6 +5,7 @@ import Sidebar from "./components/layout/Sidebar";
 import TopBar from "./components/layout/TopBar";
 import SessionDetails from "./components/sessions/SessionDetails";
 import SessionTable from "./components/sessions/SessionTable";
+import AgentResources from "./components/resources/AgentResources";
 import { useDashboardData } from "./hooks/useDashboardData";
 import { getAgentSelection, startCollection } from "./services/api";
 import type { AgentInstallation, CollectionStatus, UsageSummary } from "./types/api";
@@ -44,6 +45,7 @@ function formatMetric(key: string, usage: UsageSummary): string {
 }
 
 export default function App() {
+  const [activePage, setActivePage] = useState<"sessions" | "resources">("sessions");
   const [collection, setCollection] = useState<CollectionStatus | null>(null);
   const [agents, setAgents] = useState<AgentInstallation[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
@@ -134,6 +136,16 @@ export default function App() {
   }
 
   function openSessions() {
+    setActivePage("sessions");
+    setShowAgentPicker(false);
+    setSessionId(null);
+    if (window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }
+
+  function openResources() {
+    setActivePage("resources");
     setShowAgentPicker(false);
     setSessionId(null);
     if (window.location.hash) {
@@ -165,13 +177,19 @@ export default function App() {
 
       <div className="app-layout">
         <Sidebar
-          active={!showAgentPicker}
+          activePage={!showAgentPicker ? activePage : null}
           sessionsEnabled={Boolean(selectedAgent)}
           serviceStatus={serviceStatus}
           onSessions={openSessions}
+          onResources={openResources}
         />
         <div className="main-content">
-          {showAgentPicker ? (
+          {activePage === "resources" && !showAgentPicker ? (
+            <>
+              <AgentResources />
+              <footer className="app-footer">Local-first observability <span>·</span> Your data stays on this machine</footer>
+            </>
+          ) : showAgentPicker ? (
             <AgentPicker
               agents={agents}
               error={error}
