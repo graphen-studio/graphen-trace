@@ -7,12 +7,13 @@ import { HighlightedText } from "./HighlightedText";
 
 interface SessionSearchProps {
   sessionId: string;
+  agent: string;
   query: string;
   onQueryChange: (query: string) => void;
   onResult: (result: SessionSearchResult) => void;
 }
 
-export default function SessionSearch({ sessionId, query, onQueryChange, onResult }: SessionSearchProps) {
+export default function SessionSearch({ sessionId, agent, query, onQueryChange, onResult }: SessionSearchProps) {
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<SessionSearchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,14 +26,20 @@ export default function SessionSearch({ sessionId, query, onQueryChange, onResul
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const result = await searchSession(sessionId, term, offset, controller.signal);
+        const result = await searchSession(
+          sessionId,
+          term,
+          offset,
+          controller.signal,
+          agent,
+        );
         if (!controller.signal.aborted) setData(result);
       } catch {
         if (!controller.signal.aborted) setError("Could not search this session. Try again.");
       }
     }, 300);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [sessionId, term, offset]);
+  }, [sessionId, agent, term, offset]);
 
   function changeQuery(value: string) {
     setOffset(0);

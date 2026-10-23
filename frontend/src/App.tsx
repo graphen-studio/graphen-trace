@@ -251,7 +251,11 @@ export default function App() {
 
               {sessionId ? (
                 <>
-                  <SessionDetails key={sessionId} sessionId={sessionId} />
+                  <SessionDetails
+                    key={`${selectedAgent}:${sessionId}`}
+                    sessionId={sessionId}
+                    agent={selectedAgent ?? "opencode"}
+                  />
                   {(error || dashboard.error) && <p className="collection-state" role="alert">{error || dashboard.error}</p>}
                 </>
               ) : dashboard.data ? (

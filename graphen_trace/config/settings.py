@@ -34,6 +34,15 @@ class Settings:
             ),
         )
     ).expanduser()
+    pi_sessions_dir: Path = Path(
+        os.getenv(
+            "GRAPHEN_TRACE_PI_SESSIONS_DIR",
+            os.getenv(
+                "PI_CODING_AGENT_SESSION_DIR",
+                str(Path.home() / ".pi" / "agent" / "sessions"),
+            ),
+        )
+    ).expanduser()
     poll_interval: float = 1.0
     opencode_service_file: Path = Path(
         os.getenv(

@@ -11,14 +11,20 @@ export { Payload } from "./SessionInspector";
 export { Timeline } from "./SessionTimeline";
 export type { TimelineItem } from "../../types/session";
 
-export default function SessionDetails({ sessionId }: { sessionId: string }) {
+export default function SessionDetails({
+  sessionId,
+  agent,
+}: {
+  sessionId: string;
+  agent: string;
+}) {
   const [page, setPage] = useState<number | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(() => window.innerWidth > 1200);
   const [selection, setSelection] = useState<InspectionSelection | null>(null);
   const [query, setQuery] = useState("");
   const [scrollTarget, setScrollTarget] = useState<string | null>(null);
   const [searchTarget, setSearchTarget] = useState<string | null>(null);
-  const { session, timeline, error } = useSessionData(sessionId, page);
+  const { session, timeline, error } = useSessionData(sessionId, page, agent);
   const currentPage = timeline ? Math.floor(timeline.offset / 50) : page ?? 0;
   const lastPage = timeline ? Math.max(0, Math.ceil(timeline.total / 50) - 1) : 0;
   const message = timeline?.items.find((item) => item.id === selection?.messageId) ?? null;
@@ -117,7 +123,7 @@ export default function SessionDetails({ sessionId }: { sessionId: string }) {
               <button className="topbar-button" type="button" disabled={!timeline || currentPage === lastPage} onClick={() => changePage(lastPage)}>Go to latest</button>
             </div>
           </div>
-          <SessionSearch sessionId={sessionId} query={query} onQueryChange={(value) => {
+          <SessionSearch sessionId={sessionId} agent={agent} query={query} onQueryChange={(value) => {
             setQuery(value);
             setSearchTarget(null);
             setScrollTarget(null);

@@ -24,21 +24,40 @@ def events(
 def live_status(
     request: Request,
     agent: str = Query(default="opencode", min_length=1),
-    source: str = Query(default="opencode:sse:v2", min_length=1),
+    source: str | None = Query(default=None, min_length=1),
 ) -> dict:
     """Reports SSE health separately so polling success never hides live gaps."""
-
+    source = source or (
+        "opencode:sse:v2" if agent == "opencode" else f"{agent}:session-jsonl:v1"
+    )
     collector = request.app.state.collection_manager.live_collector
-    status = (
-        collector.status
-        if collector
-        else {
+    if agent == "pi":
+        status = {
+            "state": "unavailable",
+            "detail": (
+                "Pi collection reads local session files; live events are not captured."
+            ),
+            "last_seen": None,
+            "possible_gap": False,
+        }
+    elif agent == "opencode":
+        status = (
+            collector.status
+            if collector
+            else {
+                "state": "not_detected",
+                "detail": "No compatible OpenCode collector",
+                "last_seen": None,
+                "possible_gap": True,
+            }
+        )
+    else:
+        status = {
             "state": "not_detected",
-            "detail": "No compatible OpenCode collector",
+            "detail": f"No live-event source for agent: {agent}",
             "last_seen": None,
             "possible_gap": True,
         }
-    )
     return {
         **status,
         "agent": agent,

@@ -89,6 +89,7 @@ function MessageContent({ data, query }: { data: Record<string, unknown>; query:
           return <MarkdownContent source={content.text} query={query} key={index} />;
         }
         if (content.type === "reasoning") return <ReasoningContent key={index} value={content.text ?? content} query={query} />;
+        if (content.type === "thinking") return <ReasoningContent key={index} value={content.thinking ?? content} query={query} />;
         if (content.type === "tool") return null;
         return <Payload key={index} label={`Content: ${String(content.type ?? "unknown")}`} value={content} />;
       })}

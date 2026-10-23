@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getSessionSnapshot } from "../services/api";
 import type { SessionDetail, TimelinePage } from "../types/session";
 
-export function useSessionData(sessionId: string, page: number | null) {
+export function useSessionData(sessionId: string, page: number | null, agent: string) {
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [timeline, setTimeline] = useState<TimelinePage | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +17,12 @@ export function useSessionData(sessionId: string, page: number | null) {
 
     async function refresh() {
       try {
-        const snapshot = await getSessionSnapshot(sessionId, resolvedPage, controller.signal);
+        const snapshot = await getSessionSnapshot(
+          sessionId,
+          resolvedPage,
+          controller.signal,
+          agent,
+        );
         if (!controller.signal.aborted) {
           resolvedPage = Math.floor(snapshot.timeline.offset / 50);
           setSession(snapshot.session);
@@ -38,7 +43,7 @@ export function useSessionData(sessionId: string, page: number | null) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [sessionId, page]);
+  }, [sessionId, page, agent]);
 
   return { session, timeline, error };
 }
