@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="graphen_trace/web/dist/logo-text-light.png" alt="Graphen Trace" width="420">
+  <img src="frontend/public/logo-text-light.png" alt="Graphen Trace" width="420">
 </p>
 
 <p align="center">
