@@ -11,6 +11,9 @@ class Settings:
 
     host: str = os.getenv("GRAPHEN_TRACE_HOST", "127.0.0.1")
     port: int = int(os.getenv("GRAPHEN_TRACE_PORT", "8765"))
+    access_log: bool = os.getenv(
+        "GRAPHEN_TRACE_ACCESS_LOG", "false"
+    ).strip().lower() in {"1", "true", "yes", "on"}
     openai_upstream: str = os.getenv(
         "GRAPHEN_TRACE_OPENAI_UPSTREAM", "https://api.openai.com"
     )

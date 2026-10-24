@@ -13,6 +13,7 @@ def create_server(proxy_enabled: bool = False) -> uvicorn.Server:
         host=settings.host,
         port=settings.port,
         log_level="info",
+        access_log=settings.access_log,
     )
     return uvicorn.Server(config)
 

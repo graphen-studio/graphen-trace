@@ -71,6 +71,10 @@ poetry run graphen-trace serve
 
 Open [http://127.0.0.1:8765/](http://127.0.0.1:8765/) in your browser. Press `Ctrl+C` to stop the service.
 
+HTTP access logs are quiet by default to avoid flooding the terminal while the
+dashboard polls the API. Set `GRAPHEN_TRACE_ACCESS_LOG=1` when debugging to
+enable them.
+
 ### Run OpenCode through the optional local proxy
 
 ```bash
