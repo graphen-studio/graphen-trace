@@ -18,5 +18,8 @@ class ServeCommand(Command):
         self.line("<info>Starting Graphen Trace</info>")
         self.line(f"Dashboard: http://{settings.host}:{settings.port}")
         self.line("Press Ctrl+C to stop.\n")
-        serve(proxy_enabled=False)
+        try:
+            serve(proxy_enabled=False)
+        except KeyboardInterrupt:
+            self.line("\n<info>Graphen Trace stopped.</info>")
         return 0
