@@ -1,23 +1,24 @@
-import {
-  Activity,
-  Boxes,
-  ChartNoAxesCombined,
-  RadioTower,
-} from "lucide-react";
+import { Activity, Boxes, ChartNoAxesCombined, RadioTower } from 'lucide-react';
 
 interface SidebarProps {
-  activePage: "sessions" | "resources" | null;
+  activePage: 'sessions' | 'resources' | null;
   sessionsEnabled: boolean;
-  serviceStatus: "connecting" | "connected" | "unavailable";
+  serviceStatus: 'connecting' | 'connected' | 'unavailable';
   onSessions: () => void;
   onResources: () => void;
 }
 
-export default function Sidebar({ activePage, sessionsEnabled, serviceStatus, onSessions, onResources }: SidebarProps) {
+export default function Sidebar({
+  activePage,
+  sessionsEnabled,
+  serviceStatus,
+  onSessions,
+  onResources,
+}: SidebarProps) {
   const statusLabel = {
-    connecting: "Connecting",
-    connected: "Connected",
-    unavailable: "Unavailable",
+    connecting: 'Connecting',
+    connected: 'Connected',
+    unavailable: 'Unavailable',
   }[serviceStatus];
 
   return (
@@ -26,10 +27,10 @@ export default function Sidebar({ activePage, sessionsEnabled, serviceStatus, on
         <div className="sidebar-section">
           <p className="sidebar-section-label">Observe</p>
           <button
-            className={`sidebar-item${activePage === "sessions" ? " active" : ""}`}
+            className={`sidebar-item${activePage === 'sessions' ? ' active' : ''}`}
             type="button"
             disabled={!sessionsEnabled}
-            aria-current={activePage === "sessions" ? "page" : undefined}
+            aria-current={activePage === 'sessions' ? 'page' : undefined}
             onClick={onSessions}
           >
             <Activity size={17} aria-hidden="true" />
@@ -45,9 +46,9 @@ export default function Sidebar({ activePage, sessionsEnabled, serviceStatus, on
         <div className="sidebar-section">
           <p className="sidebar-section-label">Agent workspace</p>
           <button
-            className={`sidebar-item${activePage === "resources" ? " active" : ""}`}
+            className={`sidebar-item${activePage === 'resources' ? ' active' : ''}`}
             type="button"
-            aria-current={activePage === "resources" ? "page" : undefined}
+            aria-current={activePage === 'resources' ? 'page' : undefined}
             onClick={onResources}
           >
             <Boxes size={17} aria-hidden="true" />

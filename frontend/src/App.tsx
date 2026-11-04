@@ -1,51 +1,54 @@
-import { Activity, Bot, CircleDollarSign, Clock3, Radio } from "lucide-react";
-import { useEffect, useState } from "react";
-import AgentPicker from "./components/agents/AgentPicker";
-import Sidebar from "./components/layout/Sidebar";
-import TopBar from "./components/layout/TopBar";
-import SessionDetails from "./components/sessions/SessionDetails";
-import SessionTable from "./components/sessions/SessionTable";
-import AgentResources from "./components/resources/AgentResources";
-import { useDashboardData } from "./hooks/useDashboardData";
-import { getAgentSelection, startCollection } from "./services/api";
-import type { AgentInstallation, CollectionStatus, UsageSummary } from "./types/api";
-import { agentLabel } from "./utils/agentLabel";
-import { formatCost, formatCount } from "./utils/format";
+import { Activity, Bot, CircleDollarSign, Clock3, Radio } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import AgentPicker from './components/agents/AgentPicker';
+import Sidebar from './components/layout/Sidebar';
+import TopBar from './components/layout/TopBar';
+import SessionDetails from './components/sessions/SessionDetails';
+import SessionTable from './components/sessions/SessionTable';
+import AgentResources from './components/resources/AgentResources';
+import { useDashboardData } from './hooks/useDashboardData';
+import { getAgentSelection, startCollection } from './services/api';
+import type { AgentInstallation, CollectionStatus, UsageSummary } from './types/api';
+import { agentLabel } from './utils/agentLabel';
+import { formatCost, formatCount } from './utils/format';
 
 function selectedSession(): string | null {
   const match = window.location.hash.match(/^#\/sessions\/([^/]+)$/);
-  try { return match ? decodeURIComponent(match[1]) : null; }
-  catch { return null; }
+  try {
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
 }
 
 const metrics = [
-  { label: "Native input tokens", key: "input_tokens", icon: Activity, color: "blue" },
-  { label: "Native output tokens", key: "output_tokens", icon: Radio, color: "cyan" },
-  { label: "Reasoning tokens", key: "reasoning_tokens", icon: Bot, color: "green" },
-  { label: "Cache read tokens", key: "cache_read_tokens", icon: Activity, color: "blue" },
-  { label: "Cache write tokens", key: "cache_write_tokens", icon: Radio, color: "cyan" },
-  { label: "Sessions", key: "sessions", icon: Bot, color: "green" },
-  { label: "Agent-reported cost", key: "cost", icon: CircleDollarSign, color: "purple" },
+  { label: 'Native input tokens', key: 'input_tokens', icon: Activity, color: 'blue' },
+  { label: 'Native output tokens', key: 'output_tokens', icon: Radio, color: 'cyan' },
+  { label: 'Reasoning tokens', key: 'reasoning_tokens', icon: Bot, color: 'green' },
+  { label: 'Cache read tokens', key: 'cache_read_tokens', icon: Activity, color: 'blue' },
+  { label: 'Cache write tokens', key: 'cache_write_tokens', icon: Radio, color: 'cyan' },
+  { label: 'Sessions', key: 'sessions', icon: Bot, color: 'green' },
+  { label: 'Agent-reported cost', key: 'cost', icon: CircleDollarSign, color: 'purple' },
 ];
 
-type Theme = "dark" | "light";
+type Theme = 'dark' | 'light';
 
 function getInitialTheme(): Theme {
   try {
-    return localStorage.getItem("graphen-theme") === "light" ? "light" : "dark";
+    return localStorage.getItem('graphen-theme') === 'light' ? 'light' : 'dark';
   } catch {
-    return "dark";
+    return 'dark';
   }
 }
 
 function formatMetric(key: string, usage: UsageSummary): string {
-  if (key === "sessions") return formatCount(usage.session_count);
-  if (key === "cost") return formatCost(usage.reported_cost);
+  if (key === 'sessions') return formatCount(usage.session_count);
+  if (key === 'cost') return formatCost(usage.reported_cost);
   return formatCount(usage.usage[key]);
 }
 
 export default function App() {
-  const [activePage, setActivePage] = useState<"sessions" | "resources">("sessions");
+  const [activePage, setActivePage] = useState<'sessions' | 'resources'>('sessions');
   const [collection, setCollection] = useState<CollectionStatus | null>(null);
   const [agents, setAgents] = useState<AgentInstallation[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
@@ -64,30 +67,31 @@ export default function App() {
 
   useEffect(() => {
     const status = dashboard.data?.collection;
-    if (status?.state !== "not_started" || status.agent !== null) return;
+    if (status?.state !== 'not_started' || status.agent !== null) return;
 
     setCollection(status);
     setSelectedAgent(null);
     setShowAgentPicker(true);
     setServiceAvailable(true);
     setError(null);
-    setSelectionNotice("Collection is no longer active. Select an agent to start again. Your stored sessions remain available.");
+    setSelectionNotice(
+      'Collection is no longer active. Select an agent to start again. Your stored sessions remain available.',
+    );
   }, [dashboard.data]);
 
   useEffect(() => {
     const navigate = () => setSessionId(selectedSession());
-    window.addEventListener("hashchange", navigate);
-    return () => window.removeEventListener("hashchange", navigate);
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
   }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute(
-      "content",
-      theme === "dark" ? "#090a0f" : "#f5f7fb",
-    );
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#090a0f' : '#f5f7fb');
     try {
-      localStorage.setItem("graphen-theme", theme);
+      localStorage.setItem('graphen-theme', theme);
     } catch {
       // The theme still works for this page when browser storage is unavailable.
     }
@@ -97,8 +101,9 @@ export default function App() {
     const controller = new AbortController();
     async function loadSelection() {
       try {
-        const { agents: installedAgents, collection: status } =
-          await getAgentSelection(controller.signal);
+        const { agents: installedAgents, collection: status } = await getAgentSelection(
+          controller.signal,
+        );
         if (!controller.signal.aborted) {
           setCollection(status);
           setAgents(installedAgents);
@@ -110,7 +115,7 @@ export default function App() {
       } catch {
         if (!controller.signal.aborted) {
           setServiceAvailable(false);
-          setError("Local service unavailable.");
+          setError('Local service unavailable.');
         }
       }
     }
@@ -129,41 +134,41 @@ export default function App() {
       setShowAgentPicker(false);
       setSelectionNotice(null);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Could not start collection.");
+      setError(failure instanceof Error ? failure.message : 'Could not start collection.');
     } finally {
       setSelectingAgent(null);
     }
   }
 
   function openSessions() {
-    setActivePage("sessions");
+    setActivePage('sessions');
     setShowAgentPicker(!selectedAgent);
     setSessionId(null);
     if (window.location.hash) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }
 
   function openResources() {
-    setActivePage("resources");
+    setActivePage('resources');
     setShowAgentPicker(false);
     setSessionId(null);
     if (window.location.hash) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }
 
   function toggleTheme() {
-    setTheme((current) => current === "dark" ? "light" : "dark");
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
   }
 
   const serviceStatus = dashboard.error
-    ? "unavailable"
+    ? 'unavailable'
     : serviceAvailable === null
-      ? "connecting"
+      ? 'connecting'
       : serviceAvailable
-        ? "connected"
-        : "unavailable";
+        ? 'connected'
+        : 'unavailable';
 
   return (
     <main className="shell">
@@ -184,10 +189,12 @@ export default function App() {
           onResources={openResources}
         />
         <div className="main-content">
-          {activePage === "resources" && !showAgentPicker ? (
+          {activePage === 'resources' && !showAgentPicker ? (
             <>
               <AgentResources />
-              <footer className="app-footer">Local-first observability <span>·</span> Your data stays on this machine</footer>
+              <footer className="app-footer">
+                Local-first observability <span>·</span> Your data stays on this machine
+              </footer>
             </>
           ) : showAgentPicker ? (
             <AgentPicker
@@ -200,80 +207,113 @@ export default function App() {
             />
           ) : (
             <>
-              {!sessionId && <>
-              <section className="intro">
-                <div>
-                  <div className="eyebrow"><Activity size={14} /> AGENT OBSERVABILITY</div>
-                  <h1>Trace your work.</h1>
-                  <p>
-                    See what {selectedAgent ? agentLabel(selectedAgent) : "your coding agent"} is doing, as it happens.
-                  </p>
-                </div>
-              </section>
-
-              <section className="metrics">
-                {metrics.map(({ label, key, icon: Icon, color }) => (
-                  <article className="metric" key={label}>
-                    <div className={`metric-icon ${color}`}><Icon size={18} /></div>
+              {!sessionId && (
+                <>
+                  <section className="intro">
                     <div>
-                      <div className="metric-value">{usage ? formatMetric(key, usage) : "—"}</div>
-                      <div className="metric-label">
-                        {label}
-                        {usage &&
-                          (key === "cost"
-                            ? usage.cost_incomplete
-                            : usage.usage_incomplete.includes(key)) && " (partial)"}
+                      <div className="eyebrow">
+                        <Activity size={14} /> AGENT OBSERVABILITY
                       </div>
+                      <h1>Trace your work.</h1>
+                      <p>
+                        See what {selectedAgent ? agentLabel(selectedAgent) : 'your coding agent'}{' '}
+                        is doing, as it happens.
+                      </p>
                     </div>
-                  </article>
-                ))}
-              </section>
+                  </section>
 
-              <p className="collection-state">
-                Native token categories across all synchronized sessions; cache and reasoning are shown separately, without assuming provider totals. Cost currency/calculation are unverified, not confirmed billing.
-              </p>
-              {((currentCollection?.warnings?.length ?? 0) > 0 || currentCollection?.state === "unavailable") && (
-                <details className="collection-state collection-warning">
-                  <summary>
-                    <strong>Collection warnings ({currentCollection?.warnings?.length ?? 0})</strong>
-                    <span> · Captured data remains available</span>
-                  </summary>
-                  <div role="status">
-                    {currentCollection?.state === "unavailable" && <p>{currentCollection.detail}</p>}
-                    <ul>{currentCollection?.warnings?.map((warning) => <li key={warning}>{warning}</li>)}</ul>
-                  </div>
-                </details>
-              )}
-              {selectedAgent !== "kiro" &&
-                (liveCollection?.state === "partial" || liveCollection?.state === "unavailable") && (
-                <aside className="collection-state" role="status">
-                  <strong>Live events: {liveCollection.state}</strong>
-                  <p>{liveCollection.detail}</p>
-                  <ul>{liveCollection.warnings?.map((warning) => <li key={warning}>{warning}</li>)}</ul>
-                </aside>
-              )}
+                  <section className="metrics">
+                    {metrics.map(({ label, key, icon: Icon, color }) => (
+                      <article className="metric" key={label}>
+                        <div className={`metric-icon ${color}`}>
+                          <Icon size={18} />
+                        </div>
+                        <div>
+                          <div className="metric-value">
+                            {usage ? formatMetric(key, usage) : '—'}
+                          </div>
+                          <div className="metric-label">
+                            {label}
+                            {usage &&
+                              (key === 'cost'
+                                ? usage.cost_incomplete
+                                : usage.usage_incomplete.includes(key)) &&
+                              ' (partial)'}
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </section>
 
-              </>}
+                  <p className="collection-state">
+                    Native token categories across all synchronized sessions; cache and reasoning
+                    are shown separately, without assuming provider totals. Cost
+                    currency/calculation are unverified, not confirmed billing.
+                  </p>
+                  {((currentCollection?.warnings?.length ?? 0) > 0 ||
+                    currentCollection?.state === 'unavailable') && (
+                    <details className="collection-state collection-warning">
+                      <summary>
+                        <strong>
+                          Collection warnings ({currentCollection?.warnings?.length ?? 0})
+                        </strong>
+                        <span> · Captured data remains available</span>
+                      </summary>
+                      <div role="status">
+                        {currentCollection?.state === 'unavailable' && (
+                          <p>{currentCollection.detail}</p>
+                        )}
+                        <ul>
+                          {currentCollection?.warnings?.map((warning) => (
+                            <li key={warning}>{warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </details>
+                  )}
+                  {selectedAgent !== 'kiro' &&
+                    (liveCollection?.state === 'partial' ||
+                      liveCollection?.state === 'unavailable') && (
+                      <aside className="collection-state" role="status">
+                        <strong>Live events: {liveCollection.state}</strong>
+                        <p>{liveCollection.detail}</p>
+                        <ul>
+                          {liveCollection.warnings?.map((warning) => (
+                            <li key={warning}>{warning}</li>
+                          ))}
+                        </ul>
+                      </aside>
+                    )}
+                </>
+              )}
 
               {sessionId ? (
                 <>
                   <SessionDetails
                     key={`${selectedAgent}:${sessionId}`}
                     sessionId={sessionId}
-                    agent={selectedAgent ?? "opencode"}
+                    agent={selectedAgent ?? 'opencode'}
                   />
-                  {(error || dashboard.error) && <p className="collection-state" role="alert">{error || dashboard.error}</p>}
+                  {(error || dashboard.error) && (
+                    <p className="collection-state" role="alert">
+                      {error || dashboard.error}
+                    </p>
+                  )}
                 </>
               ) : dashboard.data ? (
                 <SessionTable sessions={sessions} />
               ) : (
                 <section className="sessions panel empty-state">
-                  <div className="empty-icon"><Clock3 size={22} /></div>
+                  <div className="empty-icon">
+                    <Clock3 size={22} />
+                  </div>
                   <h3>Loading sessions</h3>
-                  <p>{dashboard.error || "Connecting to the local service…"}</p>
+                  <p>{dashboard.error || 'Connecting to the local service…'}</p>
                 </section>
               )}
-              <footer className="app-footer">Local-first observability <span>·</span> Your data stays on this machine</footer>
+              <footer className="app-footer">
+                Local-first observability <span>·</span> Your data stays on this machine
+              </footer>
             </>
           )}
         </div>

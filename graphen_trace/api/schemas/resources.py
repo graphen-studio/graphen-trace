@@ -1,5 +1,7 @@
 """Agent resource discovery response contracts."""
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -10,9 +12,10 @@ class AgentSupportResponse(BaseModel):
     name: str
 
 
-class AgentSkillResponse(BaseModel):
-    """A unique discovered skill and the agents that support it."""
+class AgentResourceResponse(BaseModel):
+    """A unique discovered skill or steering document."""
 
+    kind: Literal["skill", "steering"]
     name: str
     description: str
     scope: str
@@ -24,4 +27,4 @@ class AgentSkillResponse(BaseModel):
 class AgentResourceListResponse(BaseModel):
     """Unique local resources discovered across supported agents."""
 
-    items: list[AgentSkillResponse]
+    items: list[AgentResourceResponse]

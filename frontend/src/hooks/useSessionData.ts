@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { getSessionSnapshot } from "../services/api";
-import type { SessionDetail, TimelinePage } from "../types/session";
+import { useEffect, useState } from 'react';
+import { getSessionSnapshot } from '../services/api';
+import type { SessionDetail, TimelinePage } from '../types/session';
 
 export function useSessionData(sessionId: string, page: number | null, agent: string) {
   const [session, setSession] = useState<SessionDetail | null>(null);
@@ -31,7 +31,7 @@ export function useSessionData(sessionId: string, page: number | null, agent: st
         }
       } catch (failure) {
         if (!controller.signal.aborted) {
-          setError(failure instanceof Error ? failure.message : "Local service unavailable.");
+          setError(failure instanceof Error ? failure.message : 'Local service unavailable.');
         }
       } finally {
         if (!controller.signal.aborted) timer = setTimeout(refresh, 2000);
