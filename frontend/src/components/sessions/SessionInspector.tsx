@@ -90,6 +90,7 @@ export default function SessionInspector({ session, message, tool, onClose, onSe
             <dl className="inspector-fields">
               <dt>Project</dt><dd>{session.directory ?? "—"}</dd>
               <dt>Model (latest)</dt><dd className="inspect-blue">{session.model?.id ?? "—"}</dd>
+              <dt>Reasoning model</dt><dd className="inspect-blue">{session.model?.reasoning_model_id ?? "—"}</dd>
               <dt>Provider</dt><dd className="inspect-blue">{session.model?.providerID ?? "—"}</dd>
               <dt>Agent version</dt><dd>{session.version ?? "—"}</dd>
               <dt>Messages</dt><dd>{formatCount(session.message_count)}</dd>

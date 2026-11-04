@@ -262,14 +262,19 @@ class Storage:
             "source": (
                 "opencode:sqlite:v2"
                 if agent == "opencode"
-                else f"{agent}:session-jsonl:v1"
+                else (
+                    "kiro:local-session-files:v1"
+                    if agent == "kiro"
+                    else f"{agent}:session-jsonl:v1"
+                )
             ),
         }
         incomplete = set()
+        source_prefix = "kiro%:%" if agent == "kiro" else f"{agent}:%"
         with self.connect() as connection:
             rows = connection.execute(
                 "SELECT data FROM observed_session WHERE agent=? AND source LIKE ?",
-                (agent, f"{agent}:%"),
+                (agent, source_prefix),
             )
             for (payload,) in rows:
                 record = json.loads(payload)
