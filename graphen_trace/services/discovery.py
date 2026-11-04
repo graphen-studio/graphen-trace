@@ -20,16 +20,17 @@ AGENTS = {
     "opencode": True,
     "claude": False,
     "codex": False,
-    "kiro": False,
+    "kiro": True,
     "pi": True,
 }
+EXECUTABLES = {"kiro": "kiro-cli"}
 
 
 def discover_agents() -> list[AgentInstallation]:
     """Finds known agent executables and reads their reported versions."""
     installations = []
     for name, has_adapter in AGENTS.items():
-        executable = shutil.which(name)
+        executable = shutil.which(EXECUTABLES.get(name, name))
         if executable is None:
             continue
         installations.append(

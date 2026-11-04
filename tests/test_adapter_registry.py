@@ -3,6 +3,8 @@
 from dataclasses import replace
 from pathlib import Path
 
+from graphen_trace.adapters.kiro.collector import KiroCollector
+from graphen_trace.adapters.kiro.discovery import KiroAdapter
 from graphen_trace.adapters.opencode.discovery import OpenCodeAdapter
 from graphen_trace.adapters.pi.collector import PiCollector
 from graphen_trace.adapters.pi.discovery import PiAdapter
@@ -20,10 +22,13 @@ def test_registry_creates_source_specific_runtimes(tmp_path: Path) -> None:
         settings,
         opencode_database=tmp_path / "opencode.db",
         pi_sessions_dir=tmp_path / "pi-sessions",
+        kiro_sessions_dir=tmp_path / "kiro-sessions",
+        kiro_workspace_sessions_dir=tmp_path / "kiro-workspace-sessions",
     )
     installations = {
         "opencode": AgentInstallation("opencode", "/bin/opencode", "2.0.32", True),
         "pi": AgentInstallation("pi", "/bin/pi", "1.4.0", True),
+        "kiro": AgentInstallation("kiro", "/bin/kiro", "2.34.1", True),
     }
 
     assert set(ADAPTERS) == set(installations)
@@ -36,8 +41,11 @@ def test_registry_creates_source_specific_runtimes(tmp_path: Path) -> None:
 
         if name == "opencode":
             assert runtime.live_collector is not None
-        else:
+        elif name == "pi":
             assert isinstance(runtime.collector, PiCollector)
+            assert runtime.live_collector is None
+        else:
+            assert isinstance(runtime.collector, KiroCollector)
             assert runtime.live_collector is None
 
 
@@ -47,5 +55,8 @@ def test_adapter_rejects_an_installation_for_another_agent() -> None:
 
     assert not OpenCodeAdapter().supports(installation)
     assert not PiAdapter().supports(
+        AgentInstallation("opencode", "/bin/opencode", "2.0.32", True)
+    )
+    assert not KiroAdapter().supports(
         AgentInstallation("opencode", "/bin/opencode", "2.0.32", True)
     )

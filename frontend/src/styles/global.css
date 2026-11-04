@@ -3,6 +3,12 @@
 .session-row { padding: 16px 22px; border-bottom: 1px solid var(--border); }
 .session-row p, .session-row small, .collection-state { color: var(--muted); font-size: 12px; }
 .collection-state { padding: 16px 22px; }
+.collection-state summary { cursor: pointer; }
+.collection-state summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.collection-warning { margin: 8px 0 14px; border: 1px solid color-mix(in srgb, var(--status-warning) 20%, var(--border)); border-radius: 7px; background: color-mix(in srgb, var(--status-warning) 4%, var(--panel)); }
+.collection-warning summary { color: var(--text-soft); }
+.collection-warning summary strong { color: var(--status-warning); }
+.collection-warning[open] summary { margin-bottom: 8px; }
 .collection-state small { display: block; margin-top: 6px; }
 .session-row a, .section-heading a, .collection-state a { color: var(--accent); }
 .section-heading a { display: inline-block; font-size: 12px; margin-bottom: 12px; }

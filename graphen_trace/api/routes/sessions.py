@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from graphen_trace.adapters.kiro import normalize as kiro_normalize
 from graphen_trace.adapters.opencode import normalize
 from graphen_trace.adapters.pi import normalize as pi_normalize
 from graphen_trace.api.schemas.collection import CollectionStatus
@@ -41,8 +42,26 @@ def session_details(
 ) -> dict:
     """Returns stored session metadata, or 404 when it has not been observed."""
 
-    source = source or _default_source(agent)
-    session = request.app.state.storage.session(session_id, source, agent)
+    if source is None and agent == "kiro":
+        session = next(
+            (
+                candidate
+                for candidate_source in (
+                    kiro_normalize.SOURCE,
+                    kiro_normalize.WORKSPACE_SOURCE,
+                )
+                if (
+                    candidate := request.app.state.storage.session(
+                        session_id, candidate_source, agent
+                    )
+                )
+                is not None
+            ),
+            None,
+        )
+    else:
+        source = source or _default_source(agent)
+        session = request.app.state.storage.session(session_id, source, agent)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
@@ -60,8 +79,8 @@ def session_timeline(
 ) -> dict:
     """Returns the persisted timeline with full native message content."""
 
-    source = source or _default_source(agent)
-    session_details(session_id, request, agent, source)
+    session = session_details(session_id, request, agent, source)
+    source = source or session["source"]
     page = request.app.state.storage.timeline(
         session_id, (limit, offset), source, agent, latest=latest
     )
@@ -71,6 +90,10 @@ def session_timeline(
             item.update(agent=agent, source=source)
     elif agent == "pi":
         page["items"] = pi_normalize.normalize_timeline_rows(page["items"])
+        for item in page["items"]:
+            item.update(agent=agent, source=source)
+    elif agent == "kiro":
+        page["items"] = kiro_normalize.normalize_timeline_rows(page["items"])
         for item in page["items"]:
             item.update(agent=agent, source=source)
     else:
@@ -91,12 +114,12 @@ def search_session(
     source: str | None = Query(default=None, min_length=1),
 ) -> dict:
     """Searches literal text in all captured prompts and responses of a session."""
-    source = source or _default_source(agent)
-    session_details(session_id, request, agent, source)
+    session = session_details(session_id, request, agent, source)
+    source = source or session["source"]
     query = q.strip()
     if not query:
         raise HTTPException(status_code=422, detail="Search text must not be blank")
-    if agent not in {"opencode", "pi"}:
+    if agent not in {"opencode", "pi", "kiro"}:
         raise HTTPException(
             status_code=409, detail="Text search not supported for agent"
         )
@@ -111,4 +134,6 @@ def _default_source(agent: str) -> str:
         return "opencode:sqlite:v2"
     if agent == "pi":
         return "pi:session-jsonl:v1"
+    if agent == "kiro":
+        return "kiro-cli:session-jsonl:v1"
     return f"{agent}:sqlite"

@@ -28,14 +28,21 @@ def live_status(
 ) -> dict:
     """Reports SSE health separately so polling success never hides live gaps."""
     source = source or (
-        "opencode:sse:v2" if agent == "opencode" else f"{agent}:session-jsonl:v1"
+        "opencode:sse:v2"
+        if agent == "opencode"
+        else (
+            "kiro:local-session-files:v1"
+            if agent == "kiro"
+            else f"{agent}:session-jsonl:v1"
+        )
     )
     collector = request.app.state.collection_manager.live_collector
-    if agent == "pi":
+    if agent in {"pi", "kiro"}:
         status = {
             "state": "unavailable",
             "detail": (
-                "Pi collection reads local session files; live events are not captured."
+                f"{agent.title()} collection reads local session files; "
+                "live events are not captured."
             ),
             "last_seen": None,
             "possible_gap": False,

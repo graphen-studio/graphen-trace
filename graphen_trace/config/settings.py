@@ -46,6 +46,18 @@ class Settings:
             ),
         )
     ).expanduser()
+    kiro_sessions_dir: Path = Path(
+        os.getenv(
+            "GRAPHEN_TRACE_KIRO_SESSIONS_DIR",
+            str(Path.home() / ".kiro" / "sessions" / "cli"),
+        )
+    ).expanduser()
+    kiro_workspace_sessions_dir: Path = Path(
+        os.getenv(
+            "GRAPHEN_TRACE_KIRO_WORKSPACE_SESSIONS_DIR",
+            str(Path.home() / ".kiro" / "sessions"),
+        )
+    ).expanduser()
     poll_interval: float = 1.0
     opencode_service_file: Path = Path(
         os.getenv(

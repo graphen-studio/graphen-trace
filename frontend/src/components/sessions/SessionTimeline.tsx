@@ -82,6 +82,7 @@ function MessageContent({ data, query }: { data: Record<string, unknown>; query:
   return (
     <div className="conversation-content">
       {typeof data.text === "string" && <MarkdownContent source={data.text} query={query} />}
+      {typeof data.content === "string" && <MarkdownContent source={data.content} query={query} />}
       {parts.map((part, index) => {
         if (!part || typeof part !== "object") return <Payload key={index} label="Content" value={part} />;
         const content = part as Record<string, unknown>;
@@ -121,6 +122,11 @@ export function Timeline({ items, selection, onInspect, query = "", searchTarget
                 <span className={`conversation-avatar${isUser ? " is-user" : ""}`}><Icon size={16} aria-hidden="true" /></span>
                 <strong>{label}</strong>
                 {item.model?.id && <span className="conversation-model">{item.model.id}</span>}
+                {item.model?.reasoning_model_id && (
+                  <span className="conversation-model">
+                    Reasoning: {item.model.reasoning_model_id}
+                  </span>
+                )}
                 <span className="conversation-time">{item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Unknown time"}</span>
                 <button
                   className="message-inspect-button"

@@ -233,13 +233,19 @@ export default function App() {
                 Native token categories across all synchronized sessions; cache and reasoning are shown separately, without assuming provider totals. Cost currency/calculation are unverified, not confirmed billing.
               </p>
               {((currentCollection?.warnings?.length ?? 0) > 0 || currentCollection?.state === "unavailable") && (
-                <aside className="collection-state" role="status">
-                  <strong>Collection warning — captured data remains available</strong>
-                  {currentCollection?.state === "unavailable" && <p>{currentCollection.detail}</p>}
-                  <ul>{currentCollection?.warnings?.map((warning) => <li key={warning}>{warning}</li>)}</ul>
-                </aside>
+                <details className="collection-state collection-warning">
+                  <summary>
+                    <strong>Collection warnings ({currentCollection?.warnings?.length ?? 0})</strong>
+                    <span> · Captured data remains available</span>
+                  </summary>
+                  <div role="status">
+                    {currentCollection?.state === "unavailable" && <p>{currentCollection.detail}</p>}
+                    <ul>{currentCollection?.warnings?.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+                  </div>
+                </details>
               )}
-              {(liveCollection?.state === "partial" || liveCollection?.state === "unavailable") && (
+              {selectedAgent !== "kiro" &&
+                (liveCollection?.state === "partial" || liveCollection?.state === "unavailable") && (
                 <aside className="collection-state" role="status">
                   <strong>Live events: {liveCollection.state}</strong>
                   <p>{liveCollection.detail}</p>

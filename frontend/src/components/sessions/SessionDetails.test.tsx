@@ -69,6 +69,29 @@ describe("session timeline", () => {
     expect(html).toContain("Private reasoning");
   });
 
+  it("renders Kiro CLI messages with string content", () => {
+    const html = renderToStaticMarkup(<Timeline items={[{
+      id: "kiro-prompt", kind: "user", sequence: 1,
+      created_at: null, interaction_id: "kiro-prompt", interaction_source: "file_order",
+      model: null, finish: null, usage: null, tools: [], source: "kiro-cli:session-jsonl:v1",
+      raw_data: { content: "Synthetic Kiro prompt" },
+    }]} />);
+
+    expect(html).toContain("Synthetic Kiro prompt");
+  });
+
+  it("shows Kiro reasoning-model provenance alongside the selected model", () => {
+    const html = renderToStaticMarkup(<Timeline items={[{
+      id: "kiro-assistant", kind: "assistant", sequence: 1,
+      created_at: null, interaction_id: null, interaction_source: null,
+      model: { id: "auto", reasoning_model_id: "synthetic-reasoner" },
+      finish: null, usage: null, tools: [], source: "kiro-workspace:session-jsonl:v1",
+    }]} />);
+
+    expect(html).toContain("auto");
+    expect(html).toContain("Reasoning: synthetic-reasoner");
+  });
+
   it("does not render empty or whitespace-only reasoning collapses", () => {
     const html = renderToStaticMarkup(<Timeline items={[{
       id: "empty-reasoning", kind: "assistant", sequence: 1,
