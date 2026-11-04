@@ -3,7 +3,7 @@ const integerFormatter = new Intl.NumberFormat(undefined, {
 });
 
 export function formatCount(value: number | null | undefined): string {
-  return value == null ? "—" : integerFormatter.format(value);
+  return value == null ? '—' : integerFormatter.format(value);
 }
 
 const costFormatter = new Intl.NumberFormat(undefined, {
@@ -11,5 +11,5 @@ const costFormatter = new Intl.NumberFormat(undefined, {
 });
 
 export function formatCost(value: number | null | undefined): string {
-  return value == null ? "—" : costFormatter.format(value);
+  return value == null ? '—' : costFormatter.format(value);
 }

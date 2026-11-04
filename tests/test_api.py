@@ -47,6 +47,7 @@ def test_resources_endpoint_returns_discovery_without_storage(
 ) -> None:
     """Resource API exposes provider data and does not create a resource table."""
     resource = {
+        "kind": "skill",
         "scope": "project",
         "name": "review",
         "description": "Review changes",

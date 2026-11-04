@@ -5,17 +5,18 @@ export interface AgentInstallation {
   adapter: boolean;
 }
 
-export interface AgentSkill {
+export interface AgentResource {
+  kind: 'skill' | 'steering';
   name: string;
   description: string;
-  scope: "project" | "global";
+  scope: 'project' | 'global';
   path: string;
   content: string;
   agents: { id: string; name: string }[];
 }
 
 export interface AgentResourceList {
-  items: AgentSkill[];
+  items: AgentResource[];
 }
 
 export interface CollectionStatus {

@@ -77,5 +77,4 @@ export interface SessionSearchResponse {
 }
 
 export type InspectionSelection =
-  | { messageId: string; toolId?: undefined }
-  | { messageId: string; toolId: string };
+  { messageId: string; toolId?: undefined } | { messageId: string; toolId: string };
