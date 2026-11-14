@@ -259,18 +259,17 @@ class Storage:
             "reported_cost": None,
             "cost_incomplete": False,
             "agent": agent,
-            "source": (
-                "opencode:sqlite:v2"
-                if agent == "opencode"
-                else (
-                    "kiro:local-session-files:v1"
-                    if agent == "kiro"
-                    else f"{agent}:session-jsonl:v1"
-                )
-            ),
+            "source": {
+                "opencode": "opencode:sqlite:v2",
+                "kiro": "kiro:local-session-files:v1",
+                "claude": "claude-code:project-jsonl:v1",
+            }.get(agent, f"{agent}:session-jsonl:v1"),
         }
         incomplete = set()
-        source_prefix = "kiro%:%" if agent == "kiro" else f"{agent}:%"
+        source_prefix = {
+            "kiro": "kiro%:%",
+            "claude": "claude-code:%",
+        }.get(agent, f"{agent}:%")
         with self.connect() as connection:
             rows = connection.execute(
                 "SELECT data FROM observed_session WHERE agent=? AND source LIKE ?",

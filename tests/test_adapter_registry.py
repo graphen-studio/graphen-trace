@@ -3,6 +3,7 @@
 from dataclasses import replace
 from pathlib import Path
 
+from graphen_trace.adapters.claude_code.collector import ClaudeCodeCollector
 from graphen_trace.adapters.kiro.collector import KiroCollector
 from graphen_trace.adapters.kiro.discovery import KiroAdapter
 from graphen_trace.adapters.opencode.discovery import OpenCodeAdapter
@@ -24,8 +25,10 @@ def test_registry_creates_source_specific_runtimes(tmp_path: Path) -> None:
         pi_sessions_dir=tmp_path / "pi-sessions",
         kiro_sessions_dir=tmp_path / "kiro-sessions",
         kiro_workspace_sessions_dir=tmp_path / "kiro-workspace-sessions",
+        claude_projects_dir=tmp_path / "claude-projects",
     )
     installations = {
+        "claude": AgentInstallation("claude", "/bin/claude", "2.1.311", True),
         "opencode": AgentInstallation("opencode", "/bin/opencode", "2.0.32", True),
         "pi": AgentInstallation("pi", "/bin/pi", "1.4.0", True),
         "kiro": AgentInstallation("kiro", "/bin/kiro", "2.34.1", True),
@@ -43,6 +46,9 @@ def test_registry_creates_source_specific_runtimes(tmp_path: Path) -> None:
             assert runtime.live_collector is not None
         elif name == "pi":
             assert isinstance(runtime.collector, PiCollector)
+            assert runtime.live_collector is None
+        elif name == "claude":
+            assert isinstance(runtime.collector, ClaudeCodeCollector)
             assert runtime.live_collector is None
         else:
             assert isinstance(runtime.collector, KiroCollector)

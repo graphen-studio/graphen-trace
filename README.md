@@ -13,15 +13,16 @@
 <p align="center">
   <a href="https://github.com/graphen-studio/graphen-trace/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square"></a>
   <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white"></a>
-  <a href="https://fastapi.tiangolo.com/"><img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.143-009688?style=flat-square&logo=fastapi&logoColor=white"></a>
-  <a href="https://www.sqlite.org/"><img alt="SQLite" src="https://img.shields.io/badge/SQLite-local%20storage-003B57?style=flat-square&logo=sqlite&logoColor=white"></a>
+  <a href="https://github.com/psf/black"><img alt="Code Style Black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+  <a href="https://pycqa.github.io/isort/"><img alt="Imports Isort" src="https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336"></a>
+  <a href="https://github.com/PyCQA/bandit"><img alt="Security Bandit" src="https://img.shields.io/badge/security-bandit-yellow.svg"></a>
 </p>
 
 ## Overview
 
 **Graphen Trace** captures and explores coding-agent activity across sessions, messages, model usage, tool execution, and live events. It stores observations in a local SQLite database and provides a dashboard backed by the Graphen API.
 
-The passive collectors read OpenCode's local SQLite database and, when available, observe its existing local service event stream. The Pi adapter reads local session JSONL files. Collection is read-only: Graphen Trace does not edit agent configuration or start agent processes.
+The passive collectors read OpenCode's local SQLite database and, when available, observe its existing local service event stream. Pi, Kiro and Claude Code adapters read local session files. Collection is read-only: Graphen Trace does not edit agent configuration or start agent sessions.
 
 ## Features
 
@@ -29,7 +30,7 @@ The passive collectors read OpenCode's local SQLite database and, when available
 - **Token and cost visibility:** Inspect native usage categories and agent-reported cost, with missing or partial data clearly identified.
 - **Live event observation:** Persist events from an already-running local OpenCode service and expose connection health and possible gaps.
 - **Local dashboard and API:** Explore synchronized data through the web dashboard and documented HTTP endpoints.
-- **Read-only collection:** Read OpenCode SQLite and Pi session files without changing agent configuration or source records.
+- **Read-only collection:** Read OpenCode SQLite and Pi, Kiro and Claude Code session files without changing agent configuration or source records.
 - **Local-first storage:** Keep captured data in a Graphen SQLite database on your machine.
 - **Compatibility reporting:** Surface warnings and partial collection status when source versions or individual records cannot be fully interpreted.
 
@@ -74,6 +75,12 @@ Open [http://127.0.0.1:8765/](http://127.0.0.1:8765/) in your browser. Press `Ct
 HTTP access logs are quiet by default to avoid flooding the terminal while the
 dashboard polls the API. Set `GRAPHEN_TRACE_ACCESS_LOG=1` when debugging to
 enable them.
+
+Claude Code collection reads persisted `~/.claude/projects/<workspace>/*.jsonl`
+transcripts. Set `GRAPHEN_TRACE_CLAUDE_PROJECTS_DIR` to use another projects
+directory. Capture is passive, not live; transcripts include sensitive thinking
+and tool content. Claude Code version compatibility has not yet been validated
+against controlled real sessions; automated tests use synthetic transcripts.
 
 ### Run OpenCode through the optional local proxy
 
