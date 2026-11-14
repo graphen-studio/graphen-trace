@@ -18,7 +18,7 @@ class AgentInstallation:
 
 AGENTS = {
     "opencode": True,
-    "claude": False,
+    "claude": True,
     "codex": False,
     "kiro": True,
     "pi": True,

@@ -155,3 +155,83 @@ def test_kiro_home_rejects_relative_override(tmp_path: Path, monkeypatch) -> Non
         resource["name"] == "default" and resource["scope"] == "global"
         for resource in resources
     )
+
+
+def test_claude_discovers_shared_skills_and_project_and_global_instructions(
+    tmp_path: Path,
+) -> None:
+    """Claude resources retain their scope without duplicating shared skills."""
+    repository = tmp_path / "repo"
+    project = repository / "src"
+    home = tmp_path / "home"
+    project.mkdir(parents=True)
+    (repository / ".git").mkdir()
+    documents = {
+        repository / ".claude/skills/review/SKILL.md": "# Project review\n",
+        home / ".claude/skills/release/SKILL.md": "# Global release\n",
+        repository / "CLAUDE.md": "# Repository instructions\n",
+        repository / ".claude/CLAUDE.md": "# Project instructions\n",
+        project / "CLAUDE.md": "# Source instructions\n",
+        home / ".claude/CLAUDE.md": "# Global instructions\n",
+    }
+    for path, content in documents.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    resources = discover_resources(project, home)
+    assert len(resources) == len(documents)
+    by_path = {resource["path"]: resource for resource in resources}
+    for path, content in documents.items():
+        resource = by_path[str(path.resolve())]
+        assert resource["content"] == content
+        assert resource["scope"] == (
+            "global" if path.is_relative_to(home) else "project"
+        )
+        if path.name == "SKILL.md":
+            assert resource["kind"] == "skill"
+            assert resource["agents"] == [
+                {"id": "opencode", "name": "OpenCode"},
+                {"id": "claude", "name": "Claude Code"},
+            ]
+        else:
+            assert resource["kind"] == "steering"
+            assert resource["name"] == "CLAUDE.md"
+            assert resource["agents"] == [{"id": "claude", "name": "Claude Code"}]
+
+
+def test_claude_instruction_discovery_skips_dependencies_and_unrelated_files(
+    tmp_path: Path,
+) -> None:
+    """Commands, plugins, configuration and dependency instructions stay excluded."""
+    project = tmp_path / "repo"
+    home = tmp_path / "home"
+    ignored = (
+        project / "node_modules/dependency/CLAUDE.md",
+        project / ".venv/package/CLAUDE.md",
+        project / ".git/CLAUDE.md",
+        project / ".claude/commands/review.md",
+        project / ".claude/plugins/example/README.md",
+        project / ".claude/settings.json",
+        home / ".claude/settings.json",
+        home / ".claude/projects/example/CLAUDE.md",
+    )
+    for path in ignored:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("Not an instruction source\n", encoding="utf-8")
+
+    assert discover_resources(project, home) == []
+
+
+def test_unreadable_claude_instructions_do_not_block_other_resources(
+    tmp_path: Path,
+) -> None:
+    """Invalid text in one instruction file does not prevent skill discovery."""
+    home = tmp_path / "home"
+    (tmp_path / "CLAUDE.md").write_bytes(b"\xff")
+    skill = tmp_path / ".claude/skills/review/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("# Review\n", encoding="utf-8")
+
+    resources = discover_resources(tmp_path, home)
+    assert len(resources) == 1
+    assert resources[0]["name"] == "review"

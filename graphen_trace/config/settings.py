@@ -58,6 +58,12 @@ class Settings:
             str(Path.home() / ".kiro" / "sessions"),
         )
     ).expanduser()
+    claude_projects_dir: Path = Path(
+        os.getenv(
+            "GRAPHEN_TRACE_CLAUDE_PROJECTS_DIR",
+            str(Path.home() / ".claude" / "projects"),
+        )
+    ).expanduser()
     poll_interval: float = 1.0
     opencode_service_file: Path = Path(
         os.getenv(

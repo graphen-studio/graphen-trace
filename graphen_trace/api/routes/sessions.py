@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from graphen_trace.adapters.claude_code import normalize as claude_normalize
 from graphen_trace.adapters.kiro import normalize as kiro_normalize
 from graphen_trace.adapters.opencode import normalize
 from graphen_trace.adapters.pi import normalize as pi_normalize
@@ -10,6 +11,12 @@ from graphen_trace.api.schemas.sessions import SessionDetail, SessionListRespons
 from graphen_trace.api.schemas.timeline import SessionSearchResponse, TimelineResponse
 
 router = APIRouter()
+TIMELINE_NORMALIZERS = {
+    "opencode": normalize.normalize_timeline,
+    "pi": pi_normalize.normalize_timeline_rows,
+    "kiro": kiro_normalize.normalize_timeline_rows,
+    "claude": claude_normalize.normalize_timeline_rows,
+}
 
 
 @router.get("/sessions", response_model=SessionListResponse)
@@ -81,25 +88,25 @@ def session_timeline(
 
     session = session_details(session_id, request, agent, source)
     source = source or session["source"]
-    page = request.app.state.storage.timeline(
-        session_id, (limit, offset), source, agent, latest=latest
-    )
-    if agent == "opencode":
-        page["items"] = normalize.normalize_timeline(page["items"])
-        for item in page["items"]:
-            item.update(agent=agent, source=source)
-    elif agent == "pi":
-        page["items"] = pi_normalize.normalize_timeline_rows(page["items"])
-        for item in page["items"]:
-            item.update(agent=agent, source=source)
-    elif agent == "kiro":
-        page["items"] = kiro_normalize.normalize_timeline_rows(page["items"])
-        for item in page["items"]:
-            item.update(agent=agent, source=source)
+    if agent == "claude":
+        # Tool results and UUID updates may be outside the requested page.
+        page = request.app.state.storage.timeline(session_id, (-1, 0), source, agent)
+        if latest:
+            offset = max(0, (page["total"] - 1) // limit) * limit
+        page["offset"] = offset
     else:
-        page["items"] = [
-            {**message, "agent": agent, "source": source} for message in page["items"]
-        ]
+        page = request.app.state.storage.timeline(
+            session_id, (limit, offset), source, agent, latest=latest
+        )
+
+    normalizer = TIMELINE_NORMALIZERS.get(agent)
+    if normalizer is not None:
+        page["items"] = normalizer(page["items"])
+    if agent == "claude":
+        page["items"] = page["items"][offset : offset + limit]
+    page["items"] = [
+        {**item, "agent": agent, "source": source} for item in page["items"]
+    ]
     return page
 
 
@@ -119,7 +126,7 @@ def search_session(
     query = q.strip()
     if not query:
         raise HTTPException(status_code=422, detail="Search text must not be blank")
-    if agent not in {"opencode", "pi", "kiro"}:
+    if agent not in {"opencode", "pi", "kiro", "claude"}:
         raise HTTPException(
             status_code=409, detail="Text search not supported for agent"
         )
@@ -134,6 +141,8 @@ def _default_source(agent: str) -> str:
         return "opencode:sqlite:v2"
     if agent == "pi":
         return "pi:session-jsonl:v1"
+    if agent == "claude":
+        return claude_normalize.SOURCE
     if agent == "kiro":
         return "kiro-cli:session-jsonl:v1"
     return f"{agent}:sqlite"
