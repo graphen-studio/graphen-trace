@@ -17,6 +17,7 @@ class ResourceProvider:
     project_steering_directories: tuple[str, ...] = ()
     global_steering_directories: tuple[str, ...] = ()
     project_instruction_files: tuple[str, ...] = ()
+    global_instruction_files: tuple[str, ...] = ()
 
 
 PROVIDERS = (
@@ -33,6 +34,14 @@ PROVIDERS = (
             ".claude/skills",
             ".agents/skills",
         ),
+    ),
+    ResourceProvider(
+        id="claude",
+        name="Claude Code",
+        project_directories=(".claude/skills",),
+        global_directories=(".claude/skills",),
+        project_instruction_files=("CLAUDE.md",),
+        global_instruction_files=(".claude/CLAUDE.md",),
     ),
     ResourceProvider(
         id="pi",
@@ -116,6 +125,9 @@ def discover_resources(
                     add_resource(
                         resources, provider, "project", resource_file, "steering"
                     )
+
+        for filename in provider.global_instruction_files:
+            add_resource(resources, provider, "global", home / filename, "steering")
 
     return list(resources.values())
 

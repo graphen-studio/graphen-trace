@@ -161,6 +161,48 @@ describe('agent resources', () => {
     expect(html).toContain('Pi supported');
   });
 
+  it('renders Claude instructions without claiming Kiro inclusion rules', () => {
+    const instructions: AgentResource = {
+      kind: 'steering',
+      scope: 'project',
+      name: 'CLAUDE.md',
+      description: '',
+      path: '/workspace/CLAUDE.md',
+      content: '---\ninclusion: always\n---\n# Claude instructions\n\nReview changes safely.\n',
+      agents: [{ id: 'claude', name: 'Claude Code' }],
+    };
+    const html = renderToStaticMarkup(
+      <AgentResourcesContent items={[instructions]} loading={false} error={null} />,
+    );
+
+    expect(html).toContain('Claude Code supported');
+    expect(html).toContain('Agent Instructions');
+    expect(html).toContain('CLAUDE.md');
+    expect(html).toContain('Review changes safely.');
+    expect(html).toContain('Discovered files do not confirm');
+    expect(html).not.toContain('Kiro');
+    expect(html).not.toContain('Always included');
+    expect(html).not.toContain('CONFIGURED INCLUSION');
+  });
+
+  it('renders a shared Claude skill once with both providers', () => {
+    const skill: AgentResource = {
+      ...resources[0],
+      path: '/workspace/.claude/skills/shared/SKILL.md',
+      agents: [
+        { id: 'opencode', name: 'OpenCode' },
+        { id: 'claude', name: 'Claude Code' },
+      ],
+    };
+    const html = renderToStaticMarkup(
+      <AgentResourcesContent items={[skill]} loading={false} error={null} />,
+    );
+
+    expect(html).toContain('OpenCode supported');
+    expect(html).toContain('Claude Code supported');
+    expect(html.match(/<strong>shared<\/strong>/g)).toHaveLength(1);
+  });
+
   it('renders a helpful empty state', () => {
     const html = renderToStaticMarkup(
       <AgentResourcesContent items={[]} loading={false} error={null} />,
@@ -169,5 +211,6 @@ describe('agent resources', () => {
     expect(html).toContain('No agent resources found');
     expect(html).toContain('SKILL.md');
     expect(html).toContain('AGENTS.md');
+    expect(html).toContain('CLAUDE.md');
   });
 });

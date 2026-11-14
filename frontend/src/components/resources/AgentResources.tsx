@@ -59,6 +59,7 @@ export function AgentResourcesContent({
         </div>
         <h1>Agent resources</h1>
         <p>Skills and steering documents from supported project and global locations.</p>
+        <p>Discovered files do not confirm that an agent loaded them in a session.</p>
       </header>
       {error && (
         <p className="resource-message" role="alert">
@@ -76,8 +77,8 @@ export function AgentResourcesContent({
           </div>
           <h3>No agent resources found</h3>
           <p>
-            Add a <code>SKILL.md</code>, steering document, or <code>AGENTS.md</code> to a supported
-            location.
+            Add a <code>SKILL.md</code>, steering document, <code>CLAUDE.md</code>, or{' '}
+            <code>AGENTS.md</code> to a supported location.
           </p>
         </section>
       ) : (
@@ -142,7 +143,11 @@ export function AgentResourcesContent({
                       {selectedScopeLabel} {selectedKindLabel}
                     </span>
                     <span className="resource-kind-badge">
-                      {selected.kind === 'skill' ? 'Agent Skill' : 'Kiro Steering'}
+                      {selected.kind === 'skill'
+                        ? 'Agent Skill'
+                        : selected.agents.some((agent) => agent.id === 'kiro')
+                          ? 'Kiro Steering'
+                          : 'Agent Instructions'}
                     </span>
                     {selected.agents.map((agent) => (
                       <span className="resource-agent-badge prominent" key={agent.id}>
@@ -242,7 +247,8 @@ function steeringInclusion(
   resource: AgentResource,
   metadata: ResourceDocument['metadata'],
 ): SteeringInclusion | null {
-  if (resource.kind !== 'steering') return null;
+  if (resource.kind !== 'steering' || !resource.agents.some((agent) => agent.id === 'kiro'))
+    return null;
 
   const fileName = resource.path.split(/[\\/]/).pop()?.toLowerCase();
   if (fileName === 'agents.md') {

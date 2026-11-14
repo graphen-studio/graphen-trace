@@ -82,6 +82,12 @@ directory. Capture is passive, not live; transcripts include sensitive thinking
 and tool content. Claude Code version compatibility has not yet been validated
 against controlled real sessions; automated tests use synthetic transcripts.
 
+Agent Resources also lists Claude Code skills from project `.claude/skills` and
+`~/.claude/skills`, project `CLAUDE.md` files (including `.claude/CLAUDE.md` and
+subdirectory instructions), and global `~/.claude/CLAUDE.md`. Shared skills appear
+once with their supported agents. These are discovered files, not evidence of
+session loading; commands, plugins and imported instruction files are not resolved.
+
 ### Run OpenCode through the optional local proxy
 
 ```bash
