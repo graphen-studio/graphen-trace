@@ -40,6 +40,36 @@ Captured records may include prompts, responses, exposed reasoning, tool argumen
 
 ## Installation
 
+### Install from a GitHub Release (recommended)
+
+Requirements: Python 3.11 or newer and [pipx](https://pipx.pypa.io/stable/).
+The wheel includes the dashboard frontend; Node.js is not required.
+
+1. Download the `.whl` file from the [latest GitHub Release](https://github.com/graphen-studio/graphen-trace/releases/latest).
+2. In a terminal, move to the directory where you downloaded it and install it:
+
+   ```bash
+   pipx install ./graphen_trace-*.whl
+   ```
+
+3. Start Graphen Trace:
+
+   ```bash
+   graphen-trace serve
+   ```
+
+To update, download the newer wheel and install it with `--force`:
+
+```bash
+pipx install --force ./graphen_trace-*.whl
+```
+
+To uninstall:
+
+```bash
+pipx uninstall graphen-trace
+```
+
 ### From source
 
 Requirements: Python 3.11 or newer, [Poetry](https://python-poetry.org/), and Node.js/npm to build the dashboard frontend.
