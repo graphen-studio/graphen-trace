@@ -81,7 +81,11 @@ def discover_resources(
 ) -> list[dict[str, object]]:
     """Returns resources found in supported project and global locations."""
     home = (home_directory or Path.home()).expanduser()
-    config_home = Path(os.getenv("XDG_CONFIG_HOME", home / ".config")).expanduser()
+    config_home = (
+        home / ".config"
+        if home_directory is not None
+        else Path(os.getenv("XDG_CONFIG_HOME", home / ".config")).expanduser()
+    )
     kiro_home = kiro_home_directory(home)
     project_roots = project_roots_for(project_directory.resolve())
     resources = {}
