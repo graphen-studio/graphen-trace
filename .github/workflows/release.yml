@@ -1,0 +1,108 @@
+name: Build and publish GitHub Release
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Verify package versions match
+        run: |
+          python - <<'PY'
+          import ast
+          import tomllib
+          from pathlib import Path
+
+          project_version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          version_tree = ast.parse(Path("graphen_trace/__version__.py").read_text())
+          module_version = next(
+              ast.literal_eval(node.value)
+              for node in version_tree.body
+              if isinstance(node, ast.Assign)
+              and any(
+                  isinstance(target, ast.Name) and target.id == "__version__"
+                  for target in node.targets
+              )
+          )
+
+          if project_version != module_version:
+              raise SystemExit(
+                  f"Version mismatch: pyproject.toml has {project_version}, "
+                  f"graphen_trace/__version__.py has {module_version}"
+              )
+          print(f"Package versions match: {project_version}")
+          PY
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install dependencies
+        run: |
+          poetry install
+          npm ci --prefix frontend
+
+      - name: Run tests
+        run: |
+          poetry run pytest
+          npm test --prefix frontend
+
+      - name: Build frontend assets
+        run: npm run build --prefix frontend
+
+      - name: Build Python distributions with Poetry
+        run: poetry build
+
+      - name: Verify wheel contents
+        run: |
+          python -m pip install --no-deps dist/*.whl
+          python - <<'PY'
+          from importlib.resources import files
+
+          frontend = files("graphen_trace").joinpath("web", "dist", "index.html")
+          if not frontend.is_file():
+              raise SystemExit("Built wheel is missing the dashboard frontend")
+          PY
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          TAG="v${VERSION}"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; skipping publication."
+            exit 0
+          fi
+
+          gh release create "$TAG" dist/* \
+            --title "$TAG" \
+            --target "$GITHUB_SHA" \
+            --generate-notes
