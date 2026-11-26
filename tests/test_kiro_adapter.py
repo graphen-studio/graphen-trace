@@ -310,6 +310,22 @@ def test_zero_token_counters_are_preserved_not_reinterpreted() -> None:
     assert timeline[0]["usage"]["output_tokens"] is None
 
 
+def test_normalizer_disambiguates_reused_native_message_ids() -> None:
+    """Keeps every transcript row when Kiro reuses a native message ID."""
+    timeline = normalize.normalize_timeline(
+        [
+            {"kind": "Prompt", "data": {"message_id": "same", "content": "one"}},
+            {
+                "kind": "AssistantMessage",
+                "data": {"message_id": "same", "content": "two"},
+            },
+        ],
+        {},
+    )
+
+    assert [item["id"] for item in timeline] == ["same", "same:record-1"]
+
+
 def test_token_totals_fall_back_to_turn_metadata_when_transcript_has_none() -> None:
     """Uses turn counters to expose consumption absent from assistant records."""
     metadata = {
