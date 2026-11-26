@@ -279,6 +279,7 @@ def normalize_timeline(
                 tool_results[(subexecution_id, call_id)] = (record, decoded[1])
 
     timeline = []
+    seen_ids = set()
     interaction_id = None
     assistant_count = sum(
         1
@@ -292,6 +293,17 @@ def normalize_timeline(
         if kind in {"Prompt", "user"}:
             interaction_id = record_id(record, data, sequence)
         native_id = record_id(record, data, sequence)
+
+        # Some Kiro transcript versions reuse a message_id across distinct
+        # records (for example, a message and a subsequent state/update row).
+        # Storage keys timeline rows by ID, so retain the native ID when unique
+        # and disambiguate only collisions using the stable file position.
+        if native_id in seen_ids:
+            native_id = f"{native_id}:record-{sequence}"
+            while native_id in seen_ids:
+                native_id = f"{native_id}:duplicate"
+                
+        seen_ids.add(native_id)
         subexecution = record.get("_graphen_subexecution")
         subexecution_id = (
             subexecution.get("id") if isinstance(subexecution, dict) else None

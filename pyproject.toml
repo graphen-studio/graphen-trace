@@ -1,6 +1,6 @@
 [project]
 name = "graphen-trace"
-version = "0.1.0"
+version = "0.1.1"
 description = "Advanced tracing and observability for coding agents across sessions, model usage, tool execution, and events."
 authors = [
     {name = "Adilson Pavan",email = "adilson.pavan@gmail.com"}
